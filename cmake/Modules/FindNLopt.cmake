@@ -13,27 +13,20 @@
 
 if(WIN32)
    SET(NLopt_DIR "C:/Arquivos de Programas/nlopt" CACHE PATH "Root directory where the NLopt library and headers are installed")
- 
-elseif(MACOS)
+elseif(APPLE)
    SET(NLopt_DIR "/usr/local/Cellar/nlopt" CACHE PATH "Root directory where the NLopt library and headers are istalled")
-   message("NLopt in MacOS")
-   
 else() 
    SET(NLopt_DIR "/usr" CACHE PATH "Root directory where the NLopt library and headers are  istalled")
-   message("NLopt in Linux")
 endif()
 
 if (EXISTS ${NLopt_DIR})
     find_path( NLopt_INCLUDE_DIR  NAMES nlopt.h
                 HINTS "${NLopt_DIR}/include" "${NLopt_DIR}/*/include" 
     )
-
-    #set ( NLopt_INCLUDE_DIR ${NLopt_INCLUDE_DIR} )
   
     find_library(NLopt_LIB  NAMES nlopt_cxx.lib libnlopt.so libnlopt_cxx.dylib 
-	              HINTS "${NLopt_DIR}/lib" "${NLopt_DIR}/*/lib" NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
+	              HINTS "${NLopt_DIR}/lib" "${NLopt_DIR}/*/lib" "${NLopt_DIR}/lib/x86_64-linux-gnu" NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
 
-	message("NLopt_LIB: ${NLopt_LIB}")			  
 				  
     if (${NLopt_LIB-NOTFOUND})
         find_library(NLopt_LIB  NAMES nlopt_cxx.lib libnlopt.so libnlopt_cxx.dylib PATHS ${SEARCH_DIRS})
