@@ -19,7 +19,7 @@ target_link_libraries(plastic_adjust ${NLopt_LIB})
 
 configure_file(input.json ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
-if (WIN32)
+if (WIN32 OR APPLE)
     add_custom_command( TARGET plastic_adjust POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
     	"${CMAKE_CURRENT_BINARY_DIR}/input.json" $<TARGET_FILE_DIR:plastic_adjust>
     )
