@@ -17,7 +17,7 @@ int main() {
     std::string path;
     std::ifstream input;
 
-    path = "input.json";
+    path = "input2.json";
     input.open(path.c_str());
 
     while (!input.is_open()) {
@@ -30,10 +30,12 @@ int main() {
 
     json commands;
     input >> commands;
-    printJSON(commands, std::cout);
+//    printJSON(commands, std::cout);
 
     std::cout << std::endl << ":: The following methods would be called: " << std::endl << std::endl;
     callMethods(commands);
+
+    glob.fER.Print(std::cout);
 
     return 0;
 }
