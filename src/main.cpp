@@ -6,6 +6,7 @@
 #include "json.hpp"
 
 #include "StubFunctions.h"
+#include "TF1Adjust.h"
 
 using json = nlohmann::json;
 void printJSON(json commandFile, std::ostream& out);
@@ -14,10 +15,15 @@ void translateToFunction(json singleCommand);
 
 
 int main() {
+    
+    TF1Adjust F1;
+    F1.Populate();
+    F1.Adjust();
+    return 0;
     std::string path;
     std::ifstream input;
 
-    path = "input2.json";
+    path = "../input2.json";
     input.open(path.c_str());
 
     while (!input.is_open()) {

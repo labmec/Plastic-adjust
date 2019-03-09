@@ -9,7 +9,7 @@
 TGlob glob;
 
 void open(std::string filePath, std::string nickname) {
-    std::string complete = "Inputdata/"+filePath;
+    std::string complete = "../Inputdata/"+filePath;
     std::cout << "open(" << complete << ", " << nickname << ");" << std::endl;
     TTestData data(complete,nickname);
     glob.fMeasure[nickname] = data;

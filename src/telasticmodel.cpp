@@ -9,8 +9,8 @@ TElasticModel::TElasticModel()
 
 void TElasticModel::Compute(TPZVec<REAL> &eps, TPZVec<REAL> &sig, TPZVec<REAL> &dsigr, TPZVec<REAL> &dsiga)
 {
-    sig[0] = fER.fLambda*(2.*eps[0]+eps[1])+2.*fER.fMu*eps[0];
-    sig[1] = fER.fLambda*(2.*eps[0]+eps[1])+2.*fER.fMu*eps[1];
+    sig[0] = fER.Lambda()*(2.*eps[0]+eps[1])+2.*fER.Mu()*eps[0];
+    sig[1] = fER.Lambda()*(2.*eps[0]+eps[1])+2.*fER.Mu()*eps[1];
     dsigr[0] = 2.*eps[0]+eps[1];
     dsigr[1] = 2.*eps[0];
     dsigr[2] = 1.;
@@ -151,8 +151,9 @@ REAL TElasticModel::Assemble2(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &ta
 
 void TElasticModel::LoadCorrection(TPZFMatrix<REAL> &delu)
 {
-    fER.fLambda += delu(0,0);
-    fER.fMu += delu(1,0);
+    REAL lambda = fER.Lambda()+delu(0,0);
+    REAL mu = fER.Mu()+delu(1,0);
+    fER.SetLameData(lambda, mu);
     for(int i=0; i<fSig0.size(); i++)
     {
         fSig0[i] += delu(i+2,0);

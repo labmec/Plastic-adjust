@@ -45,7 +45,7 @@ public:
 
     void SetYoungPoisson(REAL E, REAL poisson)
     {
-        fER.SetUp(E, poisson);
+        fER.SetEngineeringData(E, poisson);
     }
 
     void Compute(TPZVec<REAL> &eps, TPZVec<REAL> &sig, TPZVec<REAL> &dsigr, TPZVec<REAL> &dsiga);
