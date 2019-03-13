@@ -24,12 +24,12 @@ if (EXISTS ${NLopt_DIR})
                 HINTS "${NLopt_DIR}/include" "${NLopt_DIR}/*/include" 
     )
   
-    find_library(NLopt_LIB  NAMES nlopt_cxx.lib libnlopt.so libnlopt_cxx.dylib 
+    find_library(NLopt_LIB  NAMES nlopt_cxx.lib nlopt.lib libnlopt.so libnlopt_cxx.dylib libnlopt.dylib 
 	              HINTS "${NLopt_DIR}/lib" "${NLopt_DIR}/*/lib" "${NLopt_DIR}/lib/x86_64-linux-gnu" NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
 
 				  
     if (${NLopt_LIB-NOTFOUND})
-        find_library(NLopt_LIB  NAMES nlopt_cxx.lib libnlopt.so libnlopt_cxx.dylib PATHS ${SEARCH_DIRS})
+        find_library(NLopt_LIB  NAMES nlopt_cxx.lib nlopt.lib libnlopt.so libnlopt_cxx.dylib libnlopt.dylib PATHS ${SEARCH_DIRS})
     endif()
 
 endif()
