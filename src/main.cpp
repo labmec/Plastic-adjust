@@ -8,6 +8,9 @@
 #include "StubFunctions.h"
 #include "TF1Adjust.h"
 
+#include "TF1DSAdjust.h"
+
+
 using json = nlohmann::json;
 void printJSON(json commandFile, std::ostream& out);
 void callMethods(json commandFile);
@@ -16,10 +19,13 @@ void translateToFunction(json singleCommand);
 
 int main() {
     
-    TF1Adjust F1;
+    TF1DSAdjust F1;
     F1.Populate();
     F1.Adjust();
     return 0;
+    
+    
+    
     std::string path;
     std::ifstream input;
 
