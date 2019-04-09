@@ -48,7 +48,7 @@ TF1DSAdjust::~TF1DSAdjust(){
 }
 
 
-void TF1DSAdjust::B_F1_function(REAL &bMean, TPZFMatrix<REAL> &I1_SqJ2){
+void TF1DSAdjust::B_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &bMean){
     
     I1_SqJ2        = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
@@ -70,7 +70,7 @@ void TF1DSAdjust::B_F1_function(REAL &bMean, TPZFMatrix<REAL> &I1_SqJ2){
 }
 
 
-void TF1DSAdjust::C_F1_function(REAL &cMean, TPZFMatrix<REAL> &I1_SqJ2){
+void TF1DSAdjust::C_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &cMean){
     
     REAL bval = GetBval();
     
@@ -93,7 +93,7 @@ void TF1DSAdjust::C_F1_function(REAL &cMean, TPZFMatrix<REAL> &I1_SqJ2){
 }
 
 
-void TF1DSAdjust::A_F1_function(REAL &aMean, TPZFMatrix<REAL> &I1_SqJ2){
+void TF1DSAdjust::A_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &aMean){
     
     REAL bval = GetBval();
     REAL cval = GetCval();
@@ -175,9 +175,9 @@ void TF1DSAdjust::Populate()
     
         REAL a_val, b_val, c_val;
     
-        B_F1_function(b_val, m_I1_SqJ2);
-        C_F1_function(c_val, m_I1_SqJ2);
-        A_F1_function(a_val, m_I1_SqJ2);
+        B_F1_function(m_I1_SqJ2, b_val);
+        C_F1_function(m_I1_SqJ2, c_val);
+        A_F1_function(m_I1_SqJ2, a_val);
 
         m_Sandler.SetB(b_val);
         m_Sandler.SetC(c_val);

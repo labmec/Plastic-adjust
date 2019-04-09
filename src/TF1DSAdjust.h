@@ -53,13 +53,13 @@ public:
     REAL GetCval(){return m_C_val;}
     
     /// Function to represent mean value of B
-    void B_F1_function(REAL &bMean, TPZFMatrix<REAL> &I1_SqJ2);
+    void B_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &bMean);
     
     /// Function to represent mean value of C
-    void C_F1_function(REAL &cMean, TPZFMatrix<REAL> &I1_SqJ2);
+    void C_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &cMean);
     
     /// Function to represent mean value of A
-    void A_F1_function(REAL &aMean, TPZFMatrix<REAL> &I1_SqJ2);
+    void A_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &aMean);
     
     
     /// Method to initialize the class with possible data
