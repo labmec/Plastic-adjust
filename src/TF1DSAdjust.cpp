@@ -154,6 +154,47 @@ STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
 }
 
 
+
+STATE TF1DSAdjust::errorfunction2(const std::vector<STATE> &input)
+{
+    STATE B = input[0];
+    STATE C = exp(input[1]);
+    STATE D = 0.;
+    STATE W = 0.;
+    STATE A = 0.;
+    STATE K(0.), G(0.), R(0.), phi(0.), N(0.), Psi(0.), kappa_0(0.);
+    TPZSandlerExtended sandler(A,B,C,D,K,G,W,R,phi,N,Psi,kappa_0);
+    int imin=0;
+    STATE F1min = sandler.F(this->m_I1_SqJ2(imin,0))-this->m_I1_SqJ2(imin,1);
+    for(int i=0; i<m_I1_SqJ2.Rows(); i++)
+    {
+        STATE FTrial = sandler.F(this->m_I1_SqJ2(imin,0))-this->m_I1_SqJ2(imin,1);
+        if(FTrial < F1min)
+        {
+            imin = i;
+            F1min = FTrial;
+        }
+    }
+    A -= F1min;
+    sandler.SetA(A);
+    
+    
+    STATE error = 0.;
+    for(int i=0; i<m_I1_SqJ2.Rows(); i++)
+    {
+        if(A<this->m_I1_SqJ2(i,1))
+        {
+            DebugStop();
+        }
+        STATE compare1 = log(A-this->m_I1_SqJ2(i,1));
+        STATE compare2 = log(C)+this->m_I1_SqJ2(i,0)*B;
+        error += (compare1-compare2)*(compare1-compare2);
+    }
+    return error;
+}
+
+
+
 void TF1DSAdjust::Populate()
 {
     m_Sandler.MCormicRanchSand(m_Sandler);
@@ -198,7 +239,7 @@ double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my
         DebugStop();
     }
     TF1DSAdjust *loc = (TF1DSAdjust *) my_func_data;
-    double err = loc->errorfunction(x);
+    double err = loc->errorfunction2(x);
     for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
     std::cout << "error " << err << std::endl;
     return err;

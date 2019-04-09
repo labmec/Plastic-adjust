@@ -61,6 +61,10 @@ public:
     /// Function to represent mean value of A
     void A_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &aMean);
     
+    /// Method to represent the error of cost function
+    STATE errorfunction(const std::vector<STATE> &input);
+    
+    STATE errorfunction2(const std::vector<STATE> &input);
     
     /// Method to initialize the class with possible data
     void Populate();
@@ -68,8 +72,7 @@ public:
     /// Method to adjust the parameters
     void Adjust();
     
-    /// Method to represent the error of cost function
-    STATE errorfunction(const std::vector<STATE> &input);
+
     
 
 };
