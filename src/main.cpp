@@ -19,17 +19,15 @@ void translateToFunction(json singleCommand);
 
 int main() {
     
-    TF1DSAdjust F1;
-    F1.Populate();
-    F1.Adjust2();
-    return 0;
-    
-    
+//    TF1DSAdjust F1;
+//    F1.Populate();
+//    F1.Adjust2();
+//    return 0;
     
     std::string path;
     std::ifstream input;
 
-    path = "../input3.json";
+    path = "../input4.json";
     input.open(path.c_str());
 
     while (!input.is_open()) {

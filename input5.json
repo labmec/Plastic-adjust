@@ -1,0 +1,8 @@
+[
+  ["open", "CP14Odemetric.txt", "CP14Odemetric"],
+  ["model", "elasticity", "elasticmodulus"],
+  ["select", "CP14Odemetric", 9618, 9680, "unloading"],
+  ["adjust", "M"],
+  ["assign","M","CP14Odemetric"],
+  ["clear"]
+]
