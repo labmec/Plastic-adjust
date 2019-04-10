@@ -23,9 +23,9 @@ private:
     TPZSandlerExtended m_Sandler;
     TPZFMatrix<STATE> m_I1_SqJ2;
     
-    REAL m_A_val;
-    REAL m_B_val;
-    REAL m_C_val;
+    REAL m_Aval;
+    REAL m_Bval;
+    REAL m_Cval;
 
     
 public:
@@ -42,38 +42,57 @@ public:
     /// Destructor
     ~TF1DSAdjust();
     
+    /// Method to initialize the class with possible data
+    void Populate();
     
-    /// Gets the A value
-    REAL GetAval(){return m_A_val;}
     
-    /// Gets the B value
-    REAL GetBval(){return m_B_val;}
+    /// Get the A value
+    REAL Aval(){return m_Aval;}
     
-    /// Gets the C value
-    REAL GetCval(){return m_C_val;}
+    /// Set the A value
+    void SetAval(REAL aval){m_Aval = aval;}
+    
+    /// Get the B value
+    REAL Bval(){return m_Bval;}
+    
+    /// Set the B value
+    void SetBval(REAL bval){m_Bval = bval;}
+    
+    /// Get the C value
+    REAL Cval(){return m_Cval;}
+    
+    /// Set the C value
+    void SetCval(REAL cval){m_Cval = cval;}
     
     /// Function to represent mean value of B
-    void B_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &bMean);
+    REAL computeB_F1();
     
     /// Function to represent mean value of C
-    void C_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &cMean);
+    REAL computeC_F1();
     
     /// Function to represent mean value of A
-    void A_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &aMean);
+    REAL computeA_F1();
     
     /// Method to represent the error of cost function
     STATE errorfunction(const std::vector<STATE> &input);
     
-    STATE errorfunction2(const std::vector<STATE> &input);
-    
-    /// Method to initialize the class with possible data
-    void Populate();
-    
-    /// Method to adjust the parameters
+    /// Method to adjust the parameters using NEWUOA unconstrained optimization (NLopt)
     void Adjust();
     
-
     
+    /// Second derivative (Hessian) of objective function
+    void Hessian(TPZFMatrix<REAL> & Hessian, REAL I1val, REAL SqJ2Val);
+    
+    /// First derivative (Gradient) of objective function
+    void Residual(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2Val);
+    
+    /// Method to assemble Hessian and Residual
+    void Assemble(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
+    
+    /// Method to adjust the parameters using Quasi-Newton method
+    void Adjust2();
+
+ 
 
 };
 

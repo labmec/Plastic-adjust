@@ -12,17 +12,17 @@
 
 TF1DSAdjust::TF1DSAdjust(){
     
-    m_A_val = 0.;
-    m_B_val = 0.;
-    m_C_val = 0.;
+    m_Aval = 0.;
+    m_Bval = 0.;
+    m_Cval = 0.;
 
 }
 
 TF1DSAdjust::TF1DSAdjust(const TF1DSAdjust &other) : m_Sandler(other.m_Sandler), m_I1_SqJ2(other.m_I1_SqJ2)
 {
-    m_A_val = other.m_A_val;
-    m_B_val = other.m_B_val;
-    m_C_val = other.m_C_val;
+    m_Aval = other.m_Aval;
+    m_Bval = other.m_Bval;
+    m_Cval = other.m_Cval;
 }
 
 
@@ -36,9 +36,9 @@ const TF1DSAdjust & TF1DSAdjust::operator=(const TF1DSAdjust &other)
     m_Sandler = other.m_Sandler;
     m_I1_SqJ2 = other.m_I1_SqJ2;
     
-    m_A_val = other.m_A_val;
-    m_B_val = other.m_B_val;
-    m_C_val = other.m_C_val;
+    m_Aval = other.m_Aval;
+    m_Bval = other.m_Bval;
+    m_Cval = other.m_Cval;
     
     return *this;
 }
@@ -46,153 +46,6 @@ const TF1DSAdjust & TF1DSAdjust::operator=(const TF1DSAdjust &other)
 TF1DSAdjust::~TF1DSAdjust(){
     
 }
-
-
-void TF1DSAdjust::B_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &bMean){
-    
-    I1_SqJ2        = m_I1_SqJ2;
-    int64_t n_data = m_I1_SqJ2.Rows();
-    REAL sum_B_val = 0.0;
-    
-    for(int64_t i = 1; i < n_data - 1; i++)
-    {
-        REAL SqJ2primeI1_n = abs((I1_SqJ2(i+1,1)-I1_SqJ2(i,1))/(I1_SqJ2(i+1,0)-I1_SqJ2(i,0)));
-        REAL SqJ2primeI1   = abs((I1_SqJ2(i,1)-I1_SqJ2(i-1,1))/(I1_SqJ2(i,0)-I1_SqJ2(i-1,0)));
-        REAL I1_val_denom  = abs(I1_SqJ2(i+1,0)-I1_SqJ2(i-1,0));
-        REAL bvalue        = abs((log(SqJ2primeI1_n/SqJ2primeI1))/(I1_val_denom));
-        
-        sum_B_val += bvalue;
-        m_B_val    = (sum_B_val)/(n_data-2);
-    }
-    
-    bMean = GetBval();
-    
-}
-
-
-void TF1DSAdjust::C_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &cMean){
-    
-    REAL bval = GetBval();
-    
-    I1_SqJ2        = m_I1_SqJ2;
-    int64_t n_data = m_I1_SqJ2.Rows();
-    REAL sum_C_val = 0.0;
-    
-    for(int64_t i = 1; i < n_data; i++)
-    {
-        REAL SqJ2_num  = (I1_SqJ2(i,1)-I1_SqJ2(i-1,1));
-        REAL I1_denom  = exp(bval*I1_SqJ2(i,0))-exp(bval*I1_SqJ2(i-1,0));
-        REAL cvalue    = abs((SqJ2_num)/(I1_denom));
-        
-        sum_C_val += cvalue;
-        m_C_val    = (sum_C_val)/(n_data-1);
-    }
-    
-    cMean = GetCval();
-    
-}
-
-
-void TF1DSAdjust::A_F1_function(TPZFMatrix<REAL> &I1_SqJ2, REAL &aMean){
-    
-    REAL bval = GetBval();
-    REAL cval = GetCval();
-    
-    I1_SqJ2        = m_I1_SqJ2;
-    int64_t n_data = m_I1_SqJ2.Rows();
-    REAL sum_A_val = 0.0;
-    
-    for(int64_t i = 0; i < n_data; i++)
-    {
-        REAL avalue  = I1_SqJ2(i,1)+abs(cval)*exp(abs(bval)*I1_SqJ2(i,0));
-        
-        sum_A_val   += avalue;
-        m_A_val      = (sum_A_val)/(n_data);
-    }
-    
-    aMean = GetAval();
-    
-}
-
-
-STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
-{
-    STATE B = input[0];
-    STATE C = exp(input[1]);
-    STATE D = 0.;
-    STATE W = 0.;
-    STATE A = GetAval();
-    STATE K(0.), G(0.), R(0.), phi(0.), N(0.), Psi(0.), kappa_0(0.);
-    TPZSandlerExtended sandler(A,B,C,D,K,G,W,R,phi,N,Psi,kappa_0);
-    int imin=0;
-    STATE F1min = sandler.F(this->m_I1_SqJ2(imin,0))-log(abs(this->m_I1_SqJ2(imin,1)-GetAval()));
-    for(int i=0; i<m_I1_SqJ2.Rows(); i++)
-    {
-        STATE FTrial = sandler.F(this->m_I1_SqJ2(imin,0))-log(abs(this->m_I1_SqJ2(imin,1)-GetAval()));
-        if(FTrial < F1min)
-        {
-            imin = i;
-            F1min = FTrial;
-        }
-    }
-    A -= F1min;
-    sandler.SetA(A);
-
-    
-    STATE error = 0.;
-    for(int i=0; i<m_I1_SqJ2.Rows(); i++)
-    {
-        if(A<this->m_I1_SqJ2(i,1))
-        {
-            DebugStop();
-        }
-        STATE compare1 = log(A-this->m_I1_SqJ2(i,1));
-        STATE compare2 = log(C)+this->m_I1_SqJ2(i,0)*B;
-        error += (compare1-compare2)*(compare1-compare2);
-    }
-    return error;
-}
-
-
-
-STATE TF1DSAdjust::errorfunction2(const std::vector<STATE> &input)
-{
-    STATE B = input[0];
-    STATE C = exp(input[1]);
-    STATE D = 0.;
-    STATE W = 0.;
-    STATE A = 0.;
-    STATE K(0.), G(0.), R(0.), phi(0.), N(0.), Psi(0.), kappa_0(0.);
-    TPZSandlerExtended sandler(A,B,C,D,K,G,W,R,phi,N,Psi,kappa_0);
-    int imin=0;
-    STATE F1min = sandler.F(this->m_I1_SqJ2(imin,0))-this->m_I1_SqJ2(imin,1);
-    for(int i=0; i<m_I1_SqJ2.Rows(); i++)
-    {
-        STATE FTrial = sandler.F(this->m_I1_SqJ2(imin,0))-this->m_I1_SqJ2(imin,1);
-        if(FTrial < F1min)
-        {
-            imin = i;
-            F1min = FTrial;
-        }
-    }
-    A -= F1min;
-    sandler.SetA(A);
-    
-    
-    STATE error = 0.;
-    for(int i=0; i<m_I1_SqJ2.Rows(); i++)
-    {
-        if(A<this->m_I1_SqJ2(i,1))
-        {
-            DebugStop();
-        }
-        STATE compare1 = log(A-this->m_I1_SqJ2(i,1));
-        STATE compare2 = log(C)+this->m_I1_SqJ2(i,0)*B;
-        error += (compare1-compare2)*(compare1-compare2);
-    }
-    return error;
-}
-
 
 
 void TF1DSAdjust::Populate()
@@ -214,18 +67,101 @@ void TF1DSAdjust::Populate()
         m_I1_SqJ2(i,1) = F1;
     }
     
-        REAL a_val, b_val, c_val;
     
-        B_F1_function(m_I1_SqJ2, b_val);
-        C_F1_function(m_I1_SqJ2, c_val);
-        A_F1_function(m_I1_SqJ2, a_val);
+    REAL b_val = computeB_F1();
+    SetBval(b_val);
+    REAL c_val = computeC_F1();
+    SetCval(c_val);
+    REAL a_val = computeA_F1();
+    SetAval(a_val);
+    
+    m_Sandler.SetB(b_val);
+    m_Sandler.SetC(c_val);
+    m_Sandler.SetA(a_val);
+    
+    m_I1_SqJ2.Print("TestData",std::cout);
+    std::cout << "Objective parameters A = " << m_Sandler.A() << " B = " << m_Sandler.B() << " C = " << m_Sandler.C() << std::endl;
+}
 
-        m_Sandler.SetB(b_val);
-        m_Sandler.SetC(c_val);
-        m_Sandler.SetA(a_val);
+
+REAL TF1DSAdjust::computeB_F1(){
     
-        m_I1_SqJ2.Print("TestData",std::cout);
-        std::cout << "Objective parameters A = " << m_Sandler.A() << " B = " << m_Sandler.B() << " C = " << m_Sandler.C() << std::endl;
+    TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
+    int64_t n_data = m_I1_SqJ2.Rows();
+    REAL sum_B_val = 0.0;
+    
+    for(int64_t i = 1; i < n_data - 1; i++)
+    {
+        REAL SqJ2primeI1_n = abs((I1_SqJ2(i+1,1)-I1_SqJ2(i,1))/(I1_SqJ2(i+1,0)-I1_SqJ2(i,0)));
+        REAL SqJ2primeI1   = abs((I1_SqJ2(i,1)-I1_SqJ2(i-1,1))/(I1_SqJ2(i,0)-I1_SqJ2(i-1,0)));
+        REAL I1_val_denom  = abs(I1_SqJ2(i+1,0)-I1_SqJ2(i-1,0));
+        REAL bvalue        = abs((log(SqJ2primeI1_n/SqJ2primeI1))/(I1_val_denom));
+        sum_B_val += bvalue;
+    }
+    
+    return sum_B_val/(n_data-2);;
+}
+
+
+REAL TF1DSAdjust::computeC_F1(){
+    
+    TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
+    int64_t n_data = m_I1_SqJ2.Rows();
+    REAL bval = Bval();
+    REAL sum_C_val = 0.0;
+    
+    for(int64_t i = 1; i < n_data; i++)
+    {
+        REAL SqJ2_num  = (I1_SqJ2(i,1)-I1_SqJ2(i-1,1));
+        REAL I1_denom  = exp(bval*I1_SqJ2(i,0))-exp(bval*I1_SqJ2(i-1,0));
+        REAL cvalue    = abs((SqJ2_num)/(I1_denom));
+        sum_C_val += cvalue;
+    }
+    
+    return sum_C_val/(n_data-1);
+}
+
+
+REAL TF1DSAdjust::computeA_F1(){
+    
+    TPZFMatrix<REAL> &I1_SqJ2  = m_I1_SqJ2;
+    int64_t n_data = m_I1_SqJ2.Rows();
+    REAL bval = Bval();
+    REAL cval = Cval();
+    REAL sum_A_val = 0.0;
+    
+    for(int64_t i = 0; i < n_data; i++)
+    {
+        REAL avalue  = I1_SqJ2(i,1)+abs(cval)*exp(abs(bval)*I1_SqJ2(i,0));
+        sum_A_val   += avalue;
+    }
+    
+    return sum_A_val/n_data;
+}
+
+
+STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
+{
+    STATE B = input[0];
+    STATE C = input[1];
+    STATE A = input[2];
+    STATE D = 0.;
+    STATE W = 0.;
+    STATE K(0.), G(0.), R(0.), phi(0.), N(0.), Psi(0.), kappa_0(0.);
+    TPZSandlerExtended sandler(A,B,C,D,K,G,W,R,phi,N,Psi,kappa_0);
+    
+    STATE errorF1=0;
+    int64_t n_data = m_I1_SqJ2.Rows();
+    
+    for(int i=0; i<n_data; i++)
+    {
+         STATE minF1 = sandler.F(this->m_I1_SqJ2(i,0))-this->m_I1_SqJ2(i,1);
+        
+        errorF1 += minF1*minF1;
+
+    }
+
+    return errorF1;
 }
 
 
@@ -239,7 +175,7 @@ double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my
         DebugStop();
     }
     TF1DSAdjust *loc = (TF1DSAdjust *) my_func_data;
-    double err = loc->errorfunction2(x);
+    double err = loc->errorfunction(x);
     for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
     std::cout << "error " << err << std::endl;
     return err;
@@ -248,21 +184,25 @@ double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my
 
 void TF1DSAdjust::Adjust()
 {
-    nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 2);
+    nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 3);
     opt.set_min_objective(myvfunc, this);
     opt.set_xtol_rel(1e-6);
-    std::vector<double> x(2,0.);
-    std::vector<double> lb(2);
-    lb[0] = 0.; lb[1] = 0.;
+    std::vector<double> x(3,0.);
+    std::vector<double> lb(3);
+    lb[0] = 0.; lb[1] = 0.; lb[2] = 0.;
     opt.set_lower_bounds(lb);
-    std::vector<double> ub(2);
-    ub[0] = 2.*GetBval();
-    ub[1] = 2.*GetCval();
+    std::vector<double> ub(3);
+    ub[0] = 2.*Bval();
+    ub[1] = 2.*Cval();
+    ub[2] = 2.*Aval();
+    
     opt.set_upper_bounds(ub);
     
     /// Initialize the B and C value
-    x[0] = GetBval();
-    x[1] = GetCval();
+    x[0] = Bval();
+    x[1] = Cval();
+    x[2] = Aval();
+    
     double minf;
     
     try{
@@ -283,4 +223,97 @@ void TF1DSAdjust::Adjust()
     
 }
 
+
+void TF1DSAdjust::Hessian(TPZFMatrix<REAL> & Hessian, REAL I1val, REAL SqJ2Val){
+    
+    Hessian.Zero();
+    
+    Hessian(0,0) +=  2.;
+    Hessian(0,1) += -2*m_Cval*exp(m_Bval*I1val)*I1val;
+    Hessian(0,2) += -2*exp(m_Bval*I1val);
+    
+    Hessian(1,0) += -2*m_Cval*exp(m_Bval*I1val)*I1val;
+    Hessian(1,1) +=  2*pow(m_Cval,2)*exp(2*m_Bval*I1val)*pow(I1val,2)-2*m_Cval*exp(m_Bval*I1val)*pow(I1val,2)*(m_Aval-m_Cval*exp(m_Bval*I1val)-SqJ2Val);
+    Hessian(1,2) +=  2*m_Cval*exp(2*m_Bval*I1val)*I1val-2*exp(m_Bval*I1val)*I1val*(m_Aval-m_Cval*exp(m_Bval*I1val)-SqJ2Val);
+    
+    Hessian(2,0) += -2*exp(m_Bval*I1val);
+    Hessian(2,1) +=  2*m_Cval*exp(2*m_Bval*I1val)*I1val-2*exp(m_Bval*I1val)*I1val*(m_Aval-m_Cval*exp(m_Bval*I1val)-SqJ2Val);
+    Hessian(2,2) +=  2*exp(2*m_Bval*I1val);
+
+}
+
+void TF1DSAdjust::Residual(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2Val){
+    
+    Residual.Zero();
+    
+    Residual(0,0) +=  2*(m_Aval-m_Cval*exp(m_Bval*I1val)-SqJ2Val);
+    Residual(1,0) += -2*m_Cval*exp(m_Bval*I1val)*I1val*(m_Aval-m_Cval*exp(m_Bval*I1val)-SqJ2Val);
+    Residual(2,0) += -2*exp(m_Bval*I1val)*(m_Aval-m_Cval*exp(m_Bval*I1val)-SqJ2Val);
+
+}
+
+
+void TF1DSAdjust::Assemble(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res)
+    {
+    I1_SqJ2 = m_I1_SqJ2;
+    int64_t n_data = m_I1_SqJ2.Rows();
+
+    hessian.Zero();
+    res.Zero();
+
+    REAL I1val,SqJ2Val;
+
+        for(int64_t j = 0; j<n_data; j++)
+        {
+            I1val = I1_SqJ2(j,0);
+            SqJ2Val = I1_SqJ2(j,1);
+            
+            Residual(res, I1val, SqJ2Val);
+            Hessian(hessian, I1val, SqJ2Val);
+            
+        }
+}
+
+
+void TF1DSAdjust::Adjust2()
+{
+    TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
+    int64_t n_data = m_I1_SqJ2.Rows();
+    TPZFMatrix<REAL> res(n_data,1,0.);
+    TPZFMatrix<REAL> hessian(n_data,n_data,0.);
+    
+    std::vector<double> x(3,0.);
+    REAL error = errorfunction(x);
+    Assemble(I1_SqJ2, hessian, res);
+    
+    std::cout << "Incoming error " << error << std::endl;
+    {
+        std::ofstream out("tangent.nb");
+        hessian.Print("tangent",out,EMathematicaInput);
+        std::cout << "NOTHING COMING OUT?\n";
+    }
+    int count = 0;
+    REAL normres = Norm(res);
+    std::cout << "Incoming normres = " << normres << std::endl;
+    REAL tol = normres*1.e-8;
+    
+    x[0] = Bval();
+    x[1] = Cval();
+    x[2] = Aval();
+    
+    while(normres > tol && count <10)
+    {
+        hessian.SolveDirect(res,ECholesky);
+        res *= -1.;
+        REAL error = errorfunction(x);
+        Assemble(I1_SqJ2, hessian, res);
+        normres = Norm(res);
+        std::cout << "error = " << error << " normres = " << normres << std::endl;
+        count++;
+    }
+    std::cout << "found minimum at f(";
+    for(int i=0; i<x.size(); i++) std::cout << x[i] << " ";
+    std::cout << std::setprecision(10) << " min_val " << error << std::endl;
+    std::cout.flush();
+}
 
