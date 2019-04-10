@@ -21,7 +21,7 @@ int main() {
     
     TF1DSAdjust F1;
     F1.Populate();
-    F1.Adjust();
+    F1.Adjust2();
     return 0;
     
     

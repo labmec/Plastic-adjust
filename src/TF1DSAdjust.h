@@ -87,10 +87,13 @@ public:
     void Residual(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2Val);
     
     /// Method to assemble Hessian and Residual
-    void Assemble(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
+    STATE Assemble(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
     
     /// Method to adjust the parameters using Quasi-Newton method
     void Adjust2();
+    
+    /// Method to modifiy the parameters
+    void LoadCorrection(TPZFMatrix<REAL> &delx);
 
  
 
