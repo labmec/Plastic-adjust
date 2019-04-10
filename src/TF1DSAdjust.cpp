@@ -159,11 +159,8 @@ STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
     return errorF1;
 }
 
-typedef struct {
-    double a, b;
-} my_constraint_data;
 
-double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
+double myvfunction(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
 {
     if (!grad.empty()) {
         DebugStop();
@@ -171,14 +168,14 @@ double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my
     TF1DSAdjust *loc = (TF1DSAdjust *) my_func_data;
     double err = loc->errorfunction(x);
     for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
-    std::cout << "error " << err << std::endl;
+    std::cout << "error = " << err << std::endl;
     return err;
 }
 
 void TF1DSAdjust::Adjust()
 {
     nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 3);
-    opt.set_min_objective(myvfunc, this);
+    opt.set_min_objective(myvfunction, this);
     opt.set_xtol_rel(1e-6);
     std::vector<double> x(3,0.);
     std::vector<double> lb(3);

@@ -100,53 +100,56 @@ void TF1Adjust::Populate()
 }
 
 
-//
-//typedef struct {
-//    double a, b;
-//} my_constraint_data;
-//
-//double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
-//{
-//    if (!grad.empty()) {
-//        DebugStop();
-//    }
-//    TF1Adjust *loc = (TF1Adjust *) my_func_data;
-//    double err = loc->errorfunction2(x);
-//    for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
-//    std::cout << "error " << err << std::endl;
-//    return err;
-//}
-//
-//
-//void TF1Adjust::Adjust()
-//{
-//    nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 2);
-//    opt.set_min_objective(myvfunc, this);
-//    opt.set_xtol_rel(1e-6);
-//    std::vector<double> x(2,0.);
-//    std::vector<double> lb(2);
-//    lb[0] = 0.; lb[1] = -5.;
-//    opt.set_lower_bounds(lb);
-//    std::vector<double> ub(2);
-//    ub[0] = 2.;
-//    ub[1] = 10.;
-//    opt.set_upper_bounds(ub);
-//
-//    x[0] = 0.67;
-//    x[1] = log(0.18);
-//    x[0] = 0.0;
-//    x[1] = 0.0;
-//    double minf;
-//    
-//    try{
-//        nlopt::result result = opt.optimize(x, minf);
-//        std::cout << "found minimum at f(";
-//        for(int i=0; i<x.size(); i++) std::cout << x[i] << " ";
-//        std::cout << std::setprecision(10) << " min_val " << minf << std::endl;
-//    }
-//    catch(std::exception &e) {
-//        std::cout << "nlopt failed: " << e.what() << std::endl;
-//    }
-//
-//}
-//
+
+typedef struct {
+    double a, b;
+} my_constraint_data;
+
+double myvfunc(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
+{
+    if (!grad.empty()) {
+        DebugStop();
+    }
+    TF1Adjust *loc = (TF1Adjust *) my_func_data;
+    double err = loc->errorfunction2(x);
+    for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
+    std::cout << "error " << err << std::endl;
+    return err;
+}
+
+
+void TF1Adjust::Adjust()
+{
+    nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 2);
+    opt.set_min_objective(myvfunc, this);
+    opt.set_xtol_rel(1e-6);
+    std::vector<double> x(2,0.);
+    std::vector<double> lb(2);
+    lb[0] = 0.; lb[1] = -5.;
+    opt.set_lower_bounds(lb);
+    std::vector<double> ub(2);
+    ub[0] = 2.;
+    ub[1] = 10.;
+    opt.set_upper_bounds(ub);
+
+    x[0] = 0.67;
+    x[1] = log(0.18);
+    x[0] = 0.0;
+    x[1] = 0.0;
+    double minf;
+    
+    try{
+        nlopt::result result = opt.optimize(x, minf);
+        if (result < 0) {
+            std::cerr << "nlopt failed: result = " << result << std::endl;
+        }
+        std::cout << "found minimum at f(";
+        for(int i=0; i<x.size(); i++) std::cout << x[i] << " ";
+        std::cout << std::setprecision(10) << " min_val " << minf << std::endl;
+    }
+    catch(std::exception &e) {
+        std::cout << "nlopt failed: " << e.what() << std::endl;
+    }
+
+}
+
