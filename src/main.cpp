@@ -27,7 +27,7 @@ int main() {
     std::string path;
     std::ifstream input;
 
-    path = "../input4.json";
+    path = "../input_Oed.json";
     input.open(path.c_str());
 
     while (!input.is_open()) {
@@ -44,8 +44,7 @@ int main() {
 
     std::cout << std::endl << ":: The following methods would be called: " << std::endl << std::endl;
     callMethods(commands);
-
-    glob.fER.Print(std::cout);
+    
 
     return 0;
 }

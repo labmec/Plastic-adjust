@@ -33,7 +33,7 @@ public:
 private:
 
     TPZFMatrix<double> fDeform;
-    TPZFMatrix<double> fTension;
+    TPZFMatrix<double> fStress;
 
     std::string fNickName;
 
@@ -93,9 +93,9 @@ public:
 
     TTestSection &operator=(const TTestSection &cp)
     {
-        fOrigin = cp.fOrigin;
-        fFirst = cp.fFirst;
-        fLast = cp.fLast;
+        fOrigin  = cp.fOrigin;
+        fFirst   = cp.fFirst;
+        fLast    = cp.fLast;
         fComment = cp.fComment;
         return *this;
     }

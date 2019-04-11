@@ -6,6 +6,8 @@
 #include "pzstack.h"
 #include "telasticmodel.h"
 
+#include "TElasticAdjust.h"
+
 TGlob glob;
 
 void open(std::string filePath, std::string nickname) {
@@ -41,7 +43,7 @@ void adjust(std::string parameter) {
     std::cout << "adjust(" << parameter << ");" << std::endl;
     if(glob.fAdjust == EElasticResponse)
     {
-        TElasticModel model;
+        TElasticAdjust model;
         model.Adjust(glob.fActive);
         glob.fER = model.ElasticResponse();
         {
@@ -72,11 +74,11 @@ void clear() {
     std::cout << "clear();" << std::endl;
 }
 
-TTestData::TTestData(std::string &filename, std::string &nickname) : fFileName(filename), fNickName(nickname)
+TTestData::TTestData(std::string &filename, std::string &nickname) : fNickName(nickname), fFileName(filename)
 {
     int64_t numdata = NumData();
     fDeform.Redim(numdata,2);
-    fTension.Redim(numdata,2);
+    fStress.Redim(numdata,2);
     std::ifstream input(filename);
     ReadHeader(input);
     for(int64_t i = 0; i<numdata; i++)
@@ -86,7 +88,7 @@ TTestData::TTestData(std::string &filename, std::string &nickname) : fFileName(f
 
 }
 //TPZFMatrix<double> fDeform;
-//TPZFMatrix<double> fTension;
+//TPZFMatrix<double> fStress;
 
 //std::string fNickName;
 
@@ -94,32 +96,33 @@ TTestData::TTestData(std::string &filename, std::string &nickname) : fFileName(f
 
 //TPZVec<EDataType> fTypes;
 
-//// 0 -> sigr
+//// 0 -> sigc
 //// 1 -> siga
-//// 2 -> epsr
+//// 2 -> epsc
 //// 3 -> epsa
 //std::map<int,int> fRelevant;
 
 
 
-TTestData::TTestData() : fDeform(), fTension(), fNickName(), fFileName(), fTypes(), fRelevant()
+TTestData::TTestData() : fDeform(), fStress(), fNickName(), fFileName(), fTypes(), fRelevant()
 {
 
 }
 
-TTestData::TTestData(const TTestData &cp) : fDeform(cp.fDeform), fTension(cp.fTension), fNickName(cp.fNickName), fFileName(cp.fFileName), fTypes(cp.fTypes), fRelevant(cp.fRelevant)
+TTestData::TTestData(const TTestData &cp) : fDeform(cp.fDeform), fStress(cp.fStress), fNickName(cp.fNickName), fFileName(cp.fFileName), fTypes(cp.fTypes), fRelevant(cp.fRelevant)
 {
 
 }
 
 TTestData &TTestData::operator=(const TTestData &cp)
 {
-    fDeform = cp.fDeform;
-    fTension = cp.fTension;
+    fDeform   = cp.fDeform;
+    fStress   = cp.fStress;
     fNickName = cp.fNickName;
     fFileName = cp.fFileName;
-    fTypes = cp.fTypes;
+    fTypes    = cp.fTypes;
     fRelevant = cp.fRelevant;
+    
     return *this;
 }
 
@@ -130,10 +133,10 @@ void TTestData::GetData(int64_t first, int64_t last, TPZFMatrix<double> &deform,
     stress.Redim(last-first+1,2);
     for(int64_t i=first; i<=last; i++)
     {
-        deform(i-first,0) = fDeform(i,0);
-        deform(i-first,1) = fDeform(i,1);
-        stress(i-first,0) = fTension(i,0);
-        stress(i-first,1) = this->fTension(i,1);
+        deform(i-first,0) = fDeform(i,0)*0.01;
+        deform(i-first,1) = fDeform(i,1)*0.01;
+        stress(i-first,0) = fStress(i,0);
+        stress(i-first,1) = this->fStress(i,1);
     }
 }
 
@@ -223,13 +226,13 @@ void TTestData::ReadLine(std::int64_t index, std::istream &input)
         strstream >> val;
         values.Push(val);
     }
-    fTension(index,0) = values[fRelevant[0]];
-    fTension(index,1) = values[fRelevant[1]];
-    fDeform(index,0) = values[fRelevant[2]];
-    fDeform(index,1) = values[fRelevant[3]];
+    fStress(index,0)  = values[fRelevant[0]];
+    fStress(index,1)  = values[fRelevant[1]];
+    fDeform(index,0)  = values[fRelevant[2]];
+    fDeform(index,1)  = values[fRelevant[3]];
 }
 
-// computes the number of lines in the file
+/// computes the number of lines in the file
 int64_t TTestData::NumData()
 {
     std::ifstream input(fFileName);

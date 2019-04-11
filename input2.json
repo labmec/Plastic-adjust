@@ -1,8 +1,0 @@
-[
-  ["open", "CP10Triaxial.txt", "CP10Triaxial"],
-  ["model", "elasticity", "bulkmodulus"],
-  ["select", "CP10Triaxial", 1976, 2325,"unloading"],
-  ["adjust", "E"],
-  ["assign","E","CP10Triaxial"],
-  ["clear"]
-]
