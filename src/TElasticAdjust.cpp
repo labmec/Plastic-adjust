@@ -89,6 +89,7 @@ void TElasticAdjust::Adjust(TPZVec<TTestSection> &active)
         std::cout<<std::endl;
         REAL Bulk = fER.K();
         std::cout << "Bulk = " << Bulk << std::endl;
+        std::cout<<std::endl;
     } else if (isoedometric){
         cout<<"The results of oedometric test"<<endl;
         std::cout<<std::endl;
