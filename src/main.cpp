@@ -10,6 +10,7 @@
 
 #include "TF1DSAdjust.h"
 
+#include "TMohrAdjust.h"
 
 using json = nlohmann::json;
 void printJSON(json commandFile, std::ostream& out);
@@ -19,10 +20,17 @@ void translateToFunction(json singleCommand);
 
 int main() {
     
-    TF1DSAdjust F1;
-    F1.Populate();
-    F1.Adjust2();
+//    TF1DSAdjust F1;
+//    F1.Populate();
+//    F1.Adjust2();
+//    return 0;
+    
+    
+    TMohrAdjust MC;
+    MC.Populate();
+    MC.Adjust2();
     return 0;
+    
     
     std::string path;
     std::ifstream input;

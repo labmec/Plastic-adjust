@@ -66,6 +66,7 @@ void TF1DSAdjust::Populate()
         m_I1_SqJ2(i,1) = F1;
     }
     
+    /// Initial guess
     REAL b_val = computeB_F1();
     SetBval(b_val);
     REAL c_val = computeC_F1();
@@ -120,7 +121,7 @@ REAL TF1DSAdjust::computeC_F1(){
 
 REAL TF1DSAdjust::computeA_F1(){
     
-    TPZFMatrix<REAL> &I1_SqJ2  = m_I1_SqJ2;
+    TPZFMatrix<REAL> I1_SqJ2  = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
     REAL bval = Bval();
     REAL cval = Cval();
@@ -160,7 +161,7 @@ STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
 }
 
 
-double myvfunction(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
+double myvfunctionF1(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
 {
     if (!grad.empty()) {
         DebugStop();
@@ -175,7 +176,7 @@ double myvfunction(const std::vector<double> &x, std::vector<double> &grad, void
 void TF1DSAdjust::Adjust()
 {
     nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 3);
-    opt.set_min_objective(myvfunction, this);
+    opt.set_min_objective(myvfunctionF1, this);
     opt.set_xtol_rel(1e-6);
     std::vector<double> x(3,0.);
     std::vector<double> lb(3);
