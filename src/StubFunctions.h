@@ -34,6 +34,7 @@ private:
 
     TPZFMatrix<double> fDeform;
     TPZFMatrix<double> fStress;
+    TPZFMatrix<double> fInvariantStress;
 
     std::string fNickName;
 
@@ -45,8 +46,10 @@ private:
     // 1 -> siga
     // 2 -> epsr
     // 3 -> epsa
+    // 4 -> I1
+    // 5 -> SqJ2
     std::map<int,int> fRelevant;
-
+    
     void ReadHeader(std::istream &input);
 
     void ReadLine(int64_t index, std::istream &input);
@@ -65,6 +68,8 @@ public:
     TTestData &operator=(const TTestData &cp);
 
     void GetData(int64_t first, int64_t last, TPZFMatrix<double> &deform, TPZFMatrix<double> &stress);
+    void GetInvStressData(int64_t first, int64_t last, TPZFMatrix<double> &invariantStress);
+
 };
 
 class TTestSection
@@ -104,6 +109,12 @@ public:
     {
         fOrigin->GetData(fFirst,fLast,deform,stress);
     }
+    
+    void GetInvStressData(TPZFMatrix<double> &invariantStress)
+    {
+        fOrigin->GetInvStressData(fFirst,fLast,invariantStress);
+    }
+    
 };
 
 enum EAdjustModel {EElasticResponse};

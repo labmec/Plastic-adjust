@@ -65,13 +65,13 @@ public:
     void SetCval(REAL cval){m_Cval = cval;}
     
     /// Function to represent mean value of B
-    REAL computeB_F1();
+    REAL ComputeBval_in();
     
     /// Function to represent mean value of C
-    REAL computeC_F1();
+    REAL ComputeCval_in();
     
     /// Function to represent mean value of A
-    REAL computeA_F1();
+    REAL ComputeAval_in();
     
     /// Method to represent the error of cost function
     STATE errorfunction(const std::vector<STATE> &input);

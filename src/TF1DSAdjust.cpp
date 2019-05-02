@@ -48,9 +48,8 @@ TF1DSAdjust::~TF1DSAdjust(){
 
 void TF1DSAdjust::Populate()
 {
-    m_Sandler.MCormicRanchSand(m_Sandler);
     
-    /// Render data; temporary
+    /// Render the fail point data from triaxial test; temporary
     const int n_I1 = 6;
     
     REAL I1_data[n_I1] = {-5.81226425, -28.79360896, -63.94778031, -99.30833533, -125.1685927, -129.24696};
@@ -66,12 +65,12 @@ void TF1DSAdjust::Populate()
         m_I1_SqJ2(i,1) = F1;
     }
     
-    /// Initial guess
-    REAL b_val = computeB_F1();
+    /// Initial guess for B, C, A parameters
+    REAL b_val = ComputeBval_in();
     SetBval(b_val);
-    REAL c_val = computeC_F1();
+    REAL c_val = ComputeCval_in();
     SetCval(c_val);
-    REAL a_val = computeA_F1();
+    REAL a_val = ComputeAval_in();
     SetAval(a_val);
     
     m_Sandler.SetB(b_val);
@@ -82,7 +81,7 @@ void TF1DSAdjust::Populate()
     std::cout << "Objective parameters A = " << m_Sandler.A() << " B = " << m_Sandler.B() << " C = " << m_Sandler.C() << std::endl;
 }
 
-REAL TF1DSAdjust::computeB_F1(){
+REAL TF1DSAdjust::ComputeBval_in(){
     
     TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
@@ -100,7 +99,7 @@ REAL TF1DSAdjust::computeB_F1(){
     return sum_B_val/(n_data-2);;
 }
 
-REAL TF1DSAdjust::computeC_F1(){
+REAL TF1DSAdjust::ComputeCval_in(){
     
     TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
@@ -119,7 +118,7 @@ REAL TF1DSAdjust::computeC_F1(){
 }
 
 
-REAL TF1DSAdjust::computeA_F1(){
+REAL TF1DSAdjust::ComputeAval_in(){
     
     TPZFMatrix<REAL> I1_SqJ2  = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
@@ -275,7 +274,7 @@ STATE TF1DSAdjust::Assemble(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hessian
         Residual(residual, I1_SqJ2(i,0), I1_SqJ2(i,1));
         
         hessian += hessianMatrix;
-        res += residual;
+        res     += residual;
         errorF1 += minF1*minF1;
     }
   

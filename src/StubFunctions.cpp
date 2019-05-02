@@ -79,6 +79,7 @@ TTestData::TTestData(std::string &filename, std::string &nickname) : fNickName(n
     int64_t numdata = NumData();
     fDeform.Redim(numdata,2);
     fStress.Redim(numdata,2);
+    fInvariantStress.Redim(numdata,2);
     std::ifstream input(filename);
     ReadHeader(input);
     for(int64_t i = 0; i<numdata; i++)
@@ -104,12 +105,12 @@ TTestData::TTestData(std::string &filename, std::string &nickname) : fNickName(n
 
 
 
-TTestData::TTestData() : fDeform(), fStress(), fNickName(), fFileName(), fTypes(), fRelevant()
+TTestData::TTestData() : fDeform(), fStress(), fInvariantStress(),fNickName(), fFileName(), fTypes(), fRelevant()
 {
 
 }
 
-TTestData::TTestData(const TTestData &cp) : fDeform(cp.fDeform), fStress(cp.fStress), fNickName(cp.fNickName), fFileName(cp.fFileName), fTypes(cp.fTypes), fRelevant(cp.fRelevant)
+TTestData::TTestData(const TTestData &cp) : fDeform(cp.fDeform), fStress(cp.fStress), fInvariantStress(cp.fInvariantStress), fNickName(cp.fNickName), fFileName(cp.fFileName), fTypes(cp.fTypes), fRelevant(cp.fRelevant)
 {
 
 }
@@ -118,6 +119,7 @@ TTestData &TTestData::operator=(const TTestData &cp)
 {
     fDeform   = cp.fDeform;
     fStress   = cp.fStress;
+    fInvariantStress = cp.fInvariantStress;
     fNickName = cp.fNickName;
     fFileName = cp.fFileName;
     fTypes    = cp.fTypes;
@@ -139,6 +141,20 @@ void TTestData::GetData(int64_t first, int64_t last, TPZFMatrix<double> &deform,
         stress(i-first,1) = this->fStress(i,1);
     }
 }
+
+
+void TTestData::GetInvStressData(int64_t first, int64_t last, TPZFMatrix<double> &invariantStress)
+{
+    invariantStress.Redim(last-first+1,2);
+    for(int64_t i=first; i<=last; i++)
+    {
+        invariantStress(i-first,0) = fInvariantStress(i,0);
+        invariantStress(i-first,1) = this->fInvariantStress(i,1);
+        
+    }
+}
+
+
 
 void TTestData::ReadHeader(std::istream &input)
 {
@@ -191,17 +207,19 @@ void TTestData::ReadHeader(std::istream &input)
         else if(titles[i].compare("SqJ2") == 0)
         {
             fTypes[i] = ESqJ2;
+            fRelevant[5] = i;
         }
         else if(titles[i].compare("I1") == 0)
         {
             fTypes[i] = EI1;
+            fRelevant[4] = i;
         }
         else
         {
             std::cout << "I dont recognize " << titles[i] << std::endl;
         }
     }
-    if(fRelevant.size() != 4)
+    if(fRelevant.size() != 6)
     {
         std::cout << "Didnt find all relevant titles\n";
     }
@@ -230,6 +248,8 @@ void TTestData::ReadLine(std::int64_t index, std::istream &input)
     fStress(index,1)  = values[fRelevant[1]];
     fDeform(index,0)  = values[fRelevant[2]];
     fDeform(index,1)  = values[fRelevant[3]];
+    fInvariantStress(index,0) = values[fRelevant[4]];
+    fInvariantStress(index,1) = values[fRelevant[5]];
 }
 
 /// computes the number of lines in the file
