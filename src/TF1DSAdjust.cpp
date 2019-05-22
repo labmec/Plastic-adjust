@@ -66,11 +66,11 @@ void TF1DSAdjust::Populate()
     }
     
     /// Initial guess for B, C, A parameters
-    REAL b_val = ComputeBval_in();
+    REAL b_val = ComputeBval_initial();
     SetBval(b_val);
-    REAL c_val = ComputeCval_in();
+    REAL c_val = ComputeCval_initial();
     SetCval(c_val);
-    REAL a_val = ComputeAval_in();
+    REAL a_val = ComputeAval_initial();
     SetAval(a_val);
     
     m_Sandler.SetB(b_val);
@@ -81,7 +81,7 @@ void TF1DSAdjust::Populate()
     std::cout << "Objective parameters A = " << m_Sandler.A() << " B = " << m_Sandler.B() << " C = " << m_Sandler.C() << std::endl;
 }
 
-REAL TF1DSAdjust::ComputeBval_in(){
+REAL TF1DSAdjust::ComputeBval_initial(){
     
     TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
@@ -99,7 +99,7 @@ REAL TF1DSAdjust::ComputeBval_in(){
     return sum_B_val/(n_data-2);;
 }
 
-REAL TF1DSAdjust::ComputeCval_in(){
+REAL TF1DSAdjust::ComputeCval_initial(){
     
     TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();
@@ -118,7 +118,7 @@ REAL TF1DSAdjust::ComputeCval_in(){
 }
 
 
-REAL TF1DSAdjust::ComputeAval_in(){
+REAL TF1DSAdjust::ComputeAval_initial(){
     
     TPZFMatrix<REAL> I1_SqJ2  = m_I1_SqJ2;
     int64_t n_data = m_I1_SqJ2.Rows();

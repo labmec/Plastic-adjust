@@ -64,14 +64,14 @@ public:
     /// Set the C value
     void SetCval(REAL cval){m_Cval = cval;}
     
-    /// Function to represent mean value of B
-    REAL ComputeBval_in();
+    /// Analytical function to represent mean value of B
+    REAL ComputeBval_initial();
     
-    /// Function to represent mean value of C
-    REAL ComputeCval_in();
+    /// Analytical function to represent mean value of C
+    REAL ComputeCval_initial();
     
-    /// Function to represent mean value of A
-    REAL ComputeAval_in();
+    /// Analytical function to represent mean value of A
+    REAL ComputeAval_initial();
     
     /// Method to represent the error of cost function
     STATE errorfunction(const std::vector<STATE> &input);
