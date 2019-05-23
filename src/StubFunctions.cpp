@@ -7,6 +7,10 @@
 #include "telasticmodel.h"
 
 #include "TElasticAdjust.h"
+#include "TF2DSAdjust.h"
+
+
+
 
 TGlob glob;
 
@@ -22,6 +26,10 @@ void model(std::string modelName, std::string test) {
     if(modelName.compare("elasticity") == 0)
     {
         glob.fAdjust = EElasticResponse;
+    } else
+    if(modelName.compare("CapDSplasticity") == 0)
+    {
+        glob.fAdjust = DiMaggioSandlerF2Response;
     }
 }
 
@@ -57,6 +65,28 @@ void adjust(std::string parameter) {
                 deform.Print("Deform = ",out,EMathematicaInput);
                 stress_meas.Print("StressMeas = ",out,EMathematicaInput);
                 stress_comp.Print("StressComp = ",out,EMathematicaInput);
+            }
+        }
+    }
+    if(glob.fAdjust == DiMaggioSandlerF2Response)
+    {
+        
+        TF2DSAdjust model;
+        model.PopulateDW();
+        model.AdjustDW(glob.fActive);
+                
+        {
+            int nactive = glob.fActive.size();
+            std::ofstream out("Adjust.nb");
+            for(int i=0; i<nactive; i++)
+            {
+                TPZFMatrix<REAL> deform,stress_meas,stress_comp,invariantStress;
+                glob.fActive[i].GetData(deform,stress_meas);
+                glob.fActive[i].GetInvStressData(invariantStress);
+                
+                deform.Print("Deform = ",out,EMathematicaInput);
+                invariantStress.Print("InvariantStress = ",out,EMathematicaInput);
+                
             }
         }
     }
@@ -153,7 +183,6 @@ void TTestData::GetInvStressData(int64_t first, int64_t last, TPZFMatrix<double>
         
     }
 }
-
 
 
 void TTestData::ReadHeader(std::istream &input)

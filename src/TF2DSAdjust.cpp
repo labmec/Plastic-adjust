@@ -293,6 +293,7 @@ void TF2DSAdjust::LoadCorrectionR(TPZFMatrix<REAL> &delx)
 /// Reading the input data in order to compute the plastic strain
 void TF2DSAdjust::ComputedElasticStrainLX(TPZVec<TTestSection> &active, std::vector<REAL> &epsEV_data)
 {
+//    TPZElasticResponse ER;
     REAL lamda = m_ER.Lambda();
     REAL mu    = m_ER.G();
 
@@ -300,15 +301,15 @@ void TF2DSAdjust::ComputedElasticStrainLX(TPZVec<TTestSection> &active, std::vec
     for(int64_t i=0; i<active.size(); i++)
     {
         active[i].GetData(deform,stress);
-        int64_t ndata = stress.Rows();
-        TPZManVector<REAL,2> sig_measure(2);
+        int64_t ndata = deform.Rows();
+        TPZManVector<REAL,2> strain_measure(2);
 
         for(int64_t d = 0; d<ndata; d++)
         {
-            sig_measure[0] = stress(d,0);
-            sig_measure[1] = stress(d,1);
+            strain_measure[0] = deform(d,0);
+            strain_measure[1] = deform(d,1);
             
-            REAL epsEV = (2*sig_measure[0]+sig_measure[1])/(2*mu+3*lamda);
+            REAL epsEV = (2*strain_measure[0]+strain_measure[1])/(2*mu+3*lamda);
             
             epsEV_data.push_back(epsEV);
    
@@ -342,7 +343,7 @@ void TF2DSAdjust::ComputedPlasticStrainLX(TPZVec<TTestSection> &active, std::vec
     }
     
     epsPV_data = a_subtract_b(epsTV_data,epsElV_data);
-    
+        
 }
 
 std::vector<REAL> TF2DSAdjust::a_subtract_b(std::vector<REAL> & a, std::vector<REAL> & b){
@@ -357,7 +358,7 @@ std::vector<REAL> TF2DSAdjust::a_subtract_b(std::vector<REAL> & a, std::vector<R
 }
 
 /// Reading the input data: invariant stress: I1 and SqJ2
-void TF2DSAdjust::ComputedInvariantStressLX(TPZVec<TTestSection> &active, TPZFMatrix<STATE> &I1SqJ2data)
+void TF2DSAdjust::ComputedInvariantStressLX(TPZVec<TTestSection> &active, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data)
 {
     TPZFMatrix<REAL> invstress;
     for(int64_t i=0; i<active.size(); i++)
@@ -367,8 +368,11 @@ void TF2DSAdjust::ComputedInvariantStressLX(TPZVec<TTestSection> &active, TPZFMa
         
         for(int64_t j = 0; j<ndata; j++)
         {
-            I1SqJ2data(j,0) = invstress(j,0);
-            I1SqJ2data(j,0) = invstress(j,0);
+            REAL I1   = invstress(j,0);
+            REAL SqJ2 = invstress(j,0);
+            
+            I1data.push_back(I1);
+            SqJ2data.push_back(SqJ2);
         }
     }
 }
@@ -425,11 +429,10 @@ void TF2DSAdjust::Residual_LX(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2V
 }
 
 
-void TF2DSAdjust::ComputeXval(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &I1_SqJ2, std::vector<REAL> &X_data)
+void TF2DSAdjust::ComputeXval(TPZVec<TTestSection> &active, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data, std::vector<REAL> &X_data)
 {
-    int64_t n_data = I1_SqJ2.Rows();
-    ComputedInvariantStressLX(active, I1_SqJ2);
-    
+    ComputedInvariantStressLX(active, I1data, SqJ2data);
+    int n_data = I1data.size();
     TPZFMatrix<REAL> hessianMatrix(1,1);
     TPZFMatrix<REAL> residual(1,1);
     TPZFMatrix<REAL> hessian,res;
@@ -445,8 +448,8 @@ void TF2DSAdjust::ComputeXval(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &I1
     
     for(int i=0; i<n_data; i++)
     {
-        Hessian_LX(hessianMatrix, I1_SqJ2(i,0), I1_SqJ2(i,1));
-        Residual_LX(residual, I1_SqJ2(i,0), I1_SqJ2(i,1));
+        Hessian_LX(hessianMatrix, I1data[i], SqJ2data[i]);
+        Residual_LX(residual, I1data[i], SqJ2data[i]);
         
         hessian = hessianMatrix;
         res     = residual;
@@ -482,10 +485,14 @@ void TF2DSAdjust::LoadCorrectionLX(TPZFMatrix<REAL> &delx)
 void TF2DSAdjust::PopulateDW()
 {
     // Set elastic data
-    TPZElasticResponse ER;
+//    TPZElasticResponse ER;
     REAL E  = 2214.77;
     REAL nu = 0.25141;
-    ER.SetEngineeringData(E, nu);
+    SetYoungPoisson(E, nu);
+    
+    REAL lmbda = (E*nu)/((1+nu)*(1-2*nu));
+    REAL mu    = E/(2*(1+nu));
+    SetLameDataElastic(lmbda, mu);
     
     /// Render the data for failure function of DiMaggio-Sandler model
     REAL a_val = 15.091;
@@ -505,18 +512,25 @@ void TF2DSAdjust::PopulateDW()
 }
 
 /// Method to combine the X values vs plastic strain deformation
-void TF2DSAdjust::XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector<REAL> &epsPV_data, TPZFMatrix<REAL> &I1_SqJ2, std::vector<REAL> &X_data, TPZFMatrix<REAL> &X_epsP){
+void TF2DSAdjust::XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector<REAL> &epsPV_data, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data, std::vector<REAL> &X_data, TPZFMatrix<REAL> &X_epsP){
     
-    int64_t n_data = I1_SqJ2.Rows();
     ComputedPlasticStrainLX(active, epsPV_data);
-    ComputeXval(active, I1_SqJ2, X_data);
+    ComputeXval(active, I1data,SqJ2data, X_data);
     
+    
+    int64_t n_data = I1data.size();
+    X_epsP.Resize(n_data, 2);
+
     for(int i=0; i<n_data; i++)
     {
-        X_epsP(i,0) = X_data[i];
-        X_epsP(i,1) = epsPV_data[i];
+        REAL xval = X_data[i];
+        REAL epsplast = epsPV_data[i];
+        
+        X_epsP(i,0) = xval;
+        X_epsP(i,1) = epsplast;
         
     }
+        
 }
 
 
@@ -525,10 +539,11 @@ REAL TF2DSAdjust::ComputeDval_initial(){
     TPZVec<TTestSection> active;
     std::vector<REAL> epsPV_data;
     TPZFMatrix<REAL> I1_SqJ2;
+    std::vector<REAL> I1data, SqJ2data;
     std::vector<REAL> X_data;
     TPZFMatrix<REAL> X_epsP;
     
-    XvalvsEpsPlasticdata(active, epsPV_data, I1_SqJ2, X_data, X_epsP);
+    XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
     
     int64_t n_data = X_epsP.Rows();
     REAL sum_D_val = 0.0;
@@ -552,11 +567,11 @@ REAL TF2DSAdjust::ComputeWval_initial(){
     
     TPZVec<TTestSection> active;
     std::vector<REAL> epsPV_data;
-    TPZFMatrix<REAL> I1_SqJ2;
+    std::vector<REAL> I1data, SqJ2data;
     std::vector<REAL> X_data;
     TPZFMatrix<REAL> X_epsP;
     
-    XvalvsEpsPlasticdata(active, epsPV_data, I1_SqJ2, X_data, X_epsP);
+    XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
     
     REAL Dval = ComputeDval_initial();
     
@@ -600,14 +615,14 @@ void TF2DSAdjust::Residual_DW(TPZFMatrix<REAL> &Residual, REAL &X, REAL &depsPv)
 }
 
 
-STATE TF2DSAdjust::AssembleDW(TPZFMatrix<REAL> &X_epsP, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res)
+STATE TF2DSAdjust::AssembleDW(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &X_epsP, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res)
 {
-    TPZVec<TTestSection> active;
     std::vector<REAL> epsPV_data;
-    TPZFMatrix<REAL> I1_SqJ2;
+    std::vector<REAL> I1data, SqJ2data;
     std::vector<REAL> X_data;
     
-    XvalvsEpsPlasticdata(active, epsPV_data, I1_SqJ2, X_data, X_epsP);
+    XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
+    
     int64_t n_data = X_epsP.Rows();
     STATE errorDW = 0 ;
     
@@ -639,20 +654,19 @@ STATE TF2DSAdjust::AssembleDW(TPZFMatrix<REAL> &X_epsP, TPZFMatrix<REAL> &hessia
 }
 
 
-void TF2DSAdjust::AdjustDW()
+void TF2DSAdjust::AdjustDW(TPZVec<TTestSection> &active)
 {
-    TPZVec<TTestSection> active;
     std::vector<REAL> epsPV_data;
-    TPZFMatrix<REAL>  I1_SqJ2;
+    std::vector<REAL> I1data, SqJ2data;
     std::vector<REAL> X_data;
     TPZFMatrix<REAL>  X_epsP;
     
-    XvalvsEpsPlasticdata(active, epsPV_data, I1_SqJ2, X_data, X_epsP);
+    XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
     
     TPZFMatrix<REAL> res(2,1,0.);
     TPZFMatrix<REAL> hessian(2,2,0.);
     
-    REAL error = AssembleDW(X_epsP, hessian, res);
+    REAL error = AssembleDW(active, X_epsP, hessian, res);
     
     std::cout << "Incoming error " << error << std::endl;
     {
@@ -671,7 +685,7 @@ void TF2DSAdjust::AdjustDW()
         res *= -1.;
         LoadCorrectionDW(res);
         
-        REAL error = AssembleDW(X_epsP, hessian, res);
+        REAL error = AssembleDW(active, X_epsP, hessian, res);
         
         normres = Norm(res);
         std::cout << "error = " << error << " normres = " << normres << std::endl;
@@ -721,12 +735,12 @@ void TF2DSAdjust::AdjustX0()
     TPZVec<TTestSection> active;
     TPZFMatrix<REAL>  I1_SqJ2;
     std::vector<REAL> X_data;
-    TPZFMatrix<REAL> I1SqJ2data;
+    std::vector<REAL> I1data, SqJ2data;
     REAL max_X;
     REAL deltaX;
     REAL X0;
     
-    ComputeXval(active, I1_SqJ2, X_data);
+    ComputeXval(active, I1data, SqJ2data, X_data);
     
     FindMaxXvalue(X_data, max_X);
     
@@ -743,9 +757,9 @@ void TF2DSAdjust::AdjustX0()
         deltaX = max_X-X0_1;
     };
     
-    ComputedInvariantStressLX(active, I1SqJ2data);
+    ComputedInvariantStressLX(active, I1data, SqJ2data);
    
-    X0 = deltaX - 2*I1SqJ2data(0,0);
+    X0 = deltaX - 2*I1data[0];
     
     std::cout << std::endl;
     std::cout << "found minimum of F2 parameters: ";

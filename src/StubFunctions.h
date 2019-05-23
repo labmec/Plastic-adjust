@@ -10,6 +10,8 @@
 #include "pzfmatrix.h"
 #include "pzstack.h"
 #include "TPZElasticResponse.h"
+#include "TPZSandlerExtended.h"
+
 
 
 void open(std::string filePath, std::string nickname);
@@ -117,7 +119,7 @@ public:
     
 };
 
-enum EAdjustModel {EElasticResponse};
+enum EAdjustModel {EElasticResponse, DiMaggioSandlerF2Response};
 
 struct TGlob
 {
@@ -128,6 +130,8 @@ struct TGlob
     EAdjustModel fAdjust = EElasticResponse;
 
     TPZElasticResponse fER;
+    
+    TPZSandlerExtended m_Sandler;
 };
 
 extern TGlob glob;

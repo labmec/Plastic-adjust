@@ -48,6 +48,18 @@ public:
     ~TF2DSAdjust();
     
     
+    /// Method to set elastic parameters
+    void SetYoungPoisson(REAL E, REAL poisson)
+    {
+        m_ER.SetEngineeringData(E, poisson);
+    }
+    
+    void SetLameDataElastic(REAL lambda, REAL mu)
+    {
+        m_ER.SetLameData(lambda, mu);
+    }
+    
+    
     /// Get the L value
     REAL Lval(){return m_Lval;}
     
@@ -109,10 +121,10 @@ public:
     
     
     /// Method to compute the X values from experimental data
-    void ComputeXval(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &I1_SqJ2, std::vector<REAL> &X_data);
+    void ComputeXval(TPZVec<TTestSection> &active, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data, std::vector<REAL> &X_data);
     
     /// Method to combine the X values vs plastic strain deformation
-    void XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector<REAL> &epsPV_data, TPZFMatrix<REAL> &I1_SqJ2, std::vector<REAL> &L_data, TPZFMatrix<REAL> &X_epsP);
+    void XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector<REAL> &epsPV_data, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data, std::vector<REAL> &X_data, TPZFMatrix<REAL> &X_epsP);
     
     /// Analytical function to compute the D value
     REAL ComputeDval_initial();
@@ -137,14 +149,14 @@ public:
     void Residual_DW(TPZFMatrix<REAL> &Residual, REAL &X, REAL &depsPv);
     
     /// Method to assemble Hessian and Residual for parameters D and W
-    STATE AssembleDW(TPZFMatrix<REAL> &X_epsP, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
+    STATE AssembleDW(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &X_epsP, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
     
     /// Method to make cost function for parameters D and W
     STATE DWcostFunction(REAL &X, REAL &depsPv);
     
     
     /// Method to adjust the parameters D and W using Quasi-Newton method
-    void AdjustDW();
+    void AdjustDW(TPZVec<TTestSection> &active);
     
     
     /// Method to modifiy the parameters D and W
@@ -167,7 +179,7 @@ public:
     std::vector<REAL> a_subtract_b(std::vector<REAL> & a, std::vector<REAL> & b);
     
     
-    void ComputedInvariantStressLX(TPZVec<TTestSection> &active, TPZFMatrix<STATE> &I1SqJ2data);
+    void ComputedInvariantStressLX(TPZVec<TTestSection> &active, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data);
 };
 
 #endif /* TF2DSAdjust_h */
