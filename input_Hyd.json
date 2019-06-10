@@ -1,8 +1,8 @@
 [
-  ["open", "CP12Hydrostatic.txt", "CP12Hydrostatic"],
+  ["open", "CP0902Hydrostatic.txt", "CP0902Hydrostatic"],
   ["model", "elasticity", "bulkmodulus"],
-  ["select", "CP12Hydrostatic", 7589, 9804,"unloading"],
+  ["select", "CP0902Hydrostatic", 47802, 57004,"unloading"],
   ["adjust", "K"],
-  ["assign","K","CP12Hydrostatic"],
+  ["assign","K","CP0902Hydrostatic"],
   ["clear"]
 ]

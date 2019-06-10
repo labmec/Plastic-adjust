@@ -24,12 +24,14 @@ private:
     TPZSandlerExtended m_Sandler;
     TPZFMatrix<STATE> m_I1_SqJ2;
     
-    
-    REAL m_Wval;
-    REAL m_Dval;
-    
     REAL m_Lval;
     REAL m_Rval;
+    
+    REAL m_Dval;
+    REAL m_Wval;
+    
+    REAL m_iWval;
+
     
     
     
@@ -83,8 +85,14 @@ public:
     /// Get the W value
     REAL Wval(){return m_Wval;}
     
-    /// Set the R value
+    /// Set the W value
     void SetWval(REAL wval){m_Wval = wval;}
+    
+    /// Get the (iW = Log(DW)) value
+    REAL iWval(){return m_iWval;}
+    
+    /// Set the (iW = Log(DW)) value
+    void SetiWval(REAL iwval){m_iWval = iwval;}
     
     
     /// Method to represent the error of cost function for L and R
@@ -114,10 +122,10 @@ public:
     
     
     /// Second derivative (Hessian) of objective function for L (damage variable)
-    void Hessian_LX(TPZFMatrix<REAL> & Hessian, REAL I1val, REAL SqJ2Val);
+    void Hessian_LX(REAL & Hessian, REAL I1val, REAL SqJ2Val);
     
     /// First derivative (Gradient) of objective function for L (damage variable)
-    void Residual_LX(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2Val);
+    void Residual_LX(REAL &Residual, REAL I1val, REAL SqJ2Val);
     
     
     /// Method to compute the X values from experimental data
@@ -127,13 +135,13 @@ public:
     void XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector<REAL> &epsPV_data, std::vector<REAL> &I1data, std::vector<REAL> & SqJ2data, std::vector<REAL> &X_data, TPZFMatrix<REAL> &X_epsP);
     
     /// Analytical function to compute the D value
-    REAL ComputeDval_initial();
+    REAL ComputeDval_initial(TPZVec<TTestSection> &active);
     
     /// Analytical function to compute the W value
-    REAL ComputeWval_initial();
+    REAL ComputeWval_initial(TPZVec<TTestSection> &active);
     
     /// Method to modifiy the parameter L
-    void LoadCorrectionLX(TPZFMatrix<REAL> &delx);
+    void LoadCorrectionLX(REAL & delx);
     
     /// Method to initialize the class for L with possible data
     void PopulateDW();

@@ -302,18 +302,19 @@ void TF2DSAdjust::ComputedElasticStrainLX(TPZVec<TTestSection> &active, std::vec
     {
         active[i].GetData(deform,stress);
         int64_t ndata = deform.Rows();
-        TPZManVector<REAL,2> strain_measure(2);
+        TPZManVector<REAL,2> stress_measure(2);
 
         for(int64_t d = 0; d<ndata; d++)
         {
-            strain_measure[0] = deform(d,0);
-            strain_measure[1] = deform(d,1);
+            stress_measure[0] = stress(d,0);
+            stress_measure[1] = stress(d,1);
             
-            REAL epsEV = (2*strain_measure[0]+strain_measure[1])/(2*mu+3*lamda);
+            REAL epsEV = (2*stress_measure[0]+stress_measure[1])/(2*mu+3*lamda);
             
             epsEV_data.push_back(epsEV);
    
         }
+        
     }
 }
 
@@ -323,6 +324,7 @@ void TF2DSAdjust::ComputedPlasticStrainLX(TPZVec<TTestSection> &active, std::vec
     std::vector<REAL> epsTV_data;
     TPZFMatrix<REAL> deform,stress;
     ComputedElasticStrainLX(active, epsElV_data);
+    epsPV_data.assign(epsElV_data.size(), 0);
     
     for(int64_t i=0; i<active.size(); i++)
     {
@@ -342,8 +344,9 @@ void TF2DSAdjust::ComputedPlasticStrainLX(TPZVec<TTestSection> &active, std::vec
         }
     }
     
-    epsPV_data = a_subtract_b(epsTV_data,epsElV_data);
-        
+    std::vector<REAL> plastStrain = a_subtract_b(epsTV_data,epsElV_data);
+    epsPV_data = plastStrain;
+    
 }
 
 std::vector<REAL> TF2DSAdjust::a_subtract_b(std::vector<REAL> & a, std::vector<REAL> & b){
@@ -369,7 +372,7 @@ void TF2DSAdjust::ComputedInvariantStressLX(TPZVec<TTestSection> &active, std::v
         for(int64_t j = 0; j<ndata; j++)
         {
             REAL I1   = invstress(j,0);
-            REAL SqJ2 = invstress(j,0);
+            REAL SqJ2 = invstress(j,1);
             
             I1data.push_back(I1);
             SqJ2data.push_back(SqJ2);
@@ -378,54 +381,36 @@ void TF2DSAdjust::ComputedInvariantStressLX(TPZVec<TTestSection> &active, std::v
 }
 
 /// Methods to compute the L value in order to compute the X value from input data
-void TF2DSAdjust::Hessian_LX(TPZFMatrix<REAL> & Hessian, REAL I1val, REAL SqJ2Val){
-    
-    Hessian.Resize(1,1);
-    Hessian.Zero();
+void TF2DSAdjust::Hessian_LX(REAL & Hessian, REAL I1val, REAL SqJ2Val){
     
     STATE Aval = m_Sandler.A();
     STATE Bval = m_Sandler.B();
     STATE Cval = m_Sandler.C();
     REAL  rval = Rval();
     
-    Hessian(0,0) += 2*pow((-2*(I1val - m_Lval))/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) +
-                            (2*Bval*Cval*exp(Bval*m_Lval)*pow(I1val - m_Lval,2))/
-                            (pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) +
-                            (2*Bval*Cval*exp(Bval*m_Lval)*pow(SqJ2Val,2))/
-                            pow(Aval - Cval*exp(Bval*m_Lval),3),2) +
-    2*(2/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) -
-       (8*Bval*Cval*exp(Bval*m_Lval)*(I1val - m_Lval))/
-       (pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) +
-       (6*pow(Bval,2)*pow(Cval,2)*exp(2*Bval*m_Lval)*pow(I1val - m_Lval,2))/
-       (pow(Aval - Cval*exp(Bval*m_Lval),4)*pow(rval,2)) +
-       (2*pow(Bval,2)*Cval*exp(Bval*m_Lval)*pow(I1val - m_Lval,2))/
-       (pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) +
-       (6*pow(Bval,2)*pow(Cval,2)*exp(2*Bval*m_Lval)*pow(SqJ2Val,2))/
-       pow(Aval - Cval*exp(Bval*m_Lval),4) +
-       (2*pow(Bval,2)*Cval*exp(Bval*m_Lval)*pow(SqJ2Val,2))/
-       pow(Aval - Cval*exp(Bval*m_Lval),3))*
-    (-1 + pow(I1val - m_Lval,2)/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) +
-     pow(SqJ2Val,2)/pow(Aval - Cval*exp(Bval*m_Lval),2));
+    Hessian = 2*pow((-2*(I1val - m_Lval))/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) +
+                            (2*Bval*Cval*exp(Bval*m_Lval)*pow(I1val - m_Lval,2))/(pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) +
+                            (2*Bval*Cval*exp(Bval*m_Lval)*pow(SqJ2Val,2))/pow(Aval - Cval*exp(Bval*m_Lval),3),2) +
+    2*(2/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) - (8*Bval*Cval*exp(Bval*m_Lval)*(I1val - m_Lval))/
+       (pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) + (6*pow(Bval,2)*pow(Cval,2)*exp(2*Bval*m_Lval)*pow(I1val - m_Lval,2))/
+       (pow(Aval - Cval*exp(Bval*m_Lval),4)*pow(rval,2)) + (2*pow(Bval,2)*Cval*exp(Bval*m_Lval)*pow(I1val - m_Lval,2))/
+       (pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) + (6*pow(Bval,2)*pow(Cval,2)*exp(2*Bval*m_Lval)*pow(SqJ2Val,2))/
+       pow(Aval - Cval*exp(Bval*m_Lval),4) + (2*pow(Bval,2)*Cval*exp(Bval*m_Lval)*pow(SqJ2Val,2))/pow(Aval - Cval*exp(Bval*m_Lval),3))*
+    (-1 + pow(I1val - m_Lval,2)/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) + pow(SqJ2Val,2)/pow(Aval - Cval*exp(Bval*m_Lval),2));
     
 }
 
-void TF2DSAdjust::Residual_LX(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2Val){
-    
-    Residual.Resize(1,1);
-    Residual.Zero();
+void TF2DSAdjust::Residual_LX(REAL &Residual, REAL I1val, REAL SqJ2Val){
     
     STATE Aval = m_Sandler.A();
     STATE Bval = m_Sandler.B();
     STATE Cval = m_Sandler.C();
     REAL  rval = Rval();
     
-    Residual(0,0) += 2*((-2*(I1val - m_Lval))/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) +
-                        (2*Bval*Cval*exp(Bval*m_Lval)*pow(I1val - m_Lval,2))/
-                        (pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) +
-                        (2*Bval*Cval*exp(Bval*m_Lval)*pow(SqJ2Val,2))/
-                        pow(Aval - Cval*exp(Bval*m_Lval),3))*
-    (-1 + pow(I1val - m_Lval,2)/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) +
-     pow(SqJ2Val,2)/pow(Aval - Cval*exp(Bval*m_Lval),2));
+    Residual = 2*((-2*(I1val - m_Lval))/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) +
+                        (2*Bval*Cval*exp(Bval*m_Lval)*pow(I1val - m_Lval,2))/(pow(Aval - Cval*exp(Bval*m_Lval),3)*pow(rval,2)) +
+                        (2*Bval*Cval*exp(Bval*m_Lval)*pow(SqJ2Val,2))/pow(Aval - Cval*exp(Bval*m_Lval),3))*
+    (-1 + pow(I1val - m_Lval,2)/(pow(Aval - Cval*exp(Bval*m_Lval),2)*pow(rval,2)) + pow(SqJ2Val,2)/pow(Aval - Cval*exp(Bval*m_Lval),2));
 }
 
 
@@ -433,41 +418,44 @@ void TF2DSAdjust::ComputeXval(TPZVec<TTestSection> &active, std::vector<REAL> &I
 {
     ComputedInvariantStressLX(active, I1data, SqJ2data);
     int n_data = I1data.size();
-    TPZFMatrix<REAL> hessianMatrix(1,1);
-    TPZFMatrix<REAL> residual(1,1);
-    TPZFMatrix<REAL> hessian,res;
-    hessian.Resize(1,1);
-    res.Resize(1,1);
-    hessian.Zero();
-    res.Zero();
+    REAL hessian,res;
+
     
     STATE Aval = m_Sandler.A();
     STATE Bval = m_Sandler.B();
     STATE Cval = m_Sandler.C();
     REAL  rval = Rval();
     
+    REAL l_val = -30;
+    SetLval(l_val);
+    
     for(int i=0; i<n_data; i++)
     {
-        Hessian_LX(hessianMatrix, I1data[i], SqJ2data[i]);
-        Residual_LX(residual, I1data[i], SqJ2data[i]);
         
-        hessian = hessianMatrix;
-        res     = residual;
+        REAL i1   = I1data[i];
+        REAL sqj2 = SqJ2data[i];
+
         
-        int count = 0;
-        REAL normres = Norm(res);
-        REAL tol = normres*1.e-8;
-        
-        while(normres > tol && count <10)
-        {
-            hessian.SolveDirect(res,ELU);
-            res *= -1.;
-            LoadCorrectionLX(res);
-            count++;
+        REAL tol = 1.e-8;
+
+        for (int i = 1; i<=10; i++) {
+            
+            Hessian_LX(hessian, i1, sqj2);
+            Residual_LX(res, i1, sqj2);
+            
+            REAL H  = hessian;
+            REAL R  = res;
+            REAL dx = -(R/H);
+            
+            LoadCorrectionLX(dx);
+            
+            if (dx<=tol) {
+                break;
+            }
+
         }
         
         REAL lval = Lval();
-        
         REAL xval = ComputeXval(Aval, Bval, Cval, rval, lval);
         
         X_data.push_back(xval);
@@ -475,9 +463,9 @@ void TF2DSAdjust::ComputeXval(TPZVec<TTestSection> &active, std::vector<REAL> &I
 }
 
 /// Method to modify L value in order to modify the X value from input data
-void TF2DSAdjust::LoadCorrectionLX(TPZFMatrix<REAL> &delx)
+void TF2DSAdjust::LoadCorrectionLX(REAL & delx)
 {
-    REAL l_val = Lval()+delx(0,0);
+    REAL l_val = Lval()+delx;
     SetLval(l_val);
 }
 
@@ -517,7 +505,6 @@ void TF2DSAdjust::XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector
     ComputedPlasticStrainLX(active, epsPV_data);
     ComputeXval(active, I1data,SqJ2data, X_data);
     
-    
     int64_t n_data = I1data.size();
     X_epsP.Resize(n_data, 2);
 
@@ -530,13 +517,12 @@ void TF2DSAdjust::XvalvsEpsPlasticdata(TPZVec<TTestSection> &active, std::vector
         X_epsP(i,1) = epsplast;
         
     }
-        
+            
 }
 
 
-REAL TF2DSAdjust::ComputeDval_initial(){
+REAL TF2DSAdjust::ComputeDval_initial(TPZVec<TTestSection> &active){
     
-    TPZVec<TTestSection> active;
     std::vector<REAL> epsPV_data;
     TPZFMatrix<REAL> I1_SqJ2;
     std::vector<REAL> I1data, SqJ2data;
@@ -563,25 +549,23 @@ REAL TF2DSAdjust::ComputeDval_initial(){
 }
 
 
-REAL TF2DSAdjust::ComputeWval_initial(){
+REAL TF2DSAdjust::ComputeWval_initial(TPZVec<TTestSection> &active){
     
-    TPZVec<TTestSection> active;
     std::vector<REAL> epsPV_data;
     std::vector<REAL> I1data, SqJ2data;
     std::vector<REAL> X_data;
     TPZFMatrix<REAL> X_epsP;
     
     XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
-    
-    REAL Dval = ComputeDval_initial();
+    REAL Dval = ComputeDval_initial(active);
     
     int64_t n_data = X_epsP.Rows();
     REAL sum_W_val = 0.0;
     
     for(int64_t i = 0; i < n_data; i++)
     {
-        REAL num   = X_epsP(i,0);
-        REAL denum = exp(Dval*X_epsP(i,1))-1;
+        REAL num   = X_epsP(i,1);
+        REAL denum = exp(Dval*X_epsP(i,0))-1;
         
         REAL dval  = abs(num/denum);
         sum_W_val += dval;
@@ -609,8 +593,8 @@ void TF2DSAdjust::Residual_DW(TPZFMatrix<REAL> &Residual, REAL &X, REAL &depsPv)
     Residual.Resize(2,1);
     Residual.Zero();
     
-    Residual(0,0) += -2*X*(-m_Wval - m_Dval*X + log(depsPv));
-    Residual(1,0) += -2*(-m_Wval - m_Dval*X + log(depsPv));
+    Residual(0,0) += -2*X*(-m_iWval - m_Dval*X + log(depsPv));
+    Residual(1,0) += -2*(-m_iWval - m_Dval*X + log(depsPv));
     
 }
 
@@ -649,6 +633,7 @@ STATE TF2DSAdjust::AssembleDW(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &X_
         res     += residual;
         errorDW += minDW*minDW;
         
+        
     }
     return errorDW;
 }
@@ -661,10 +646,18 @@ void TF2DSAdjust::AdjustDW(TPZVec<TTestSection> &active)
     std::vector<REAL> X_data;
     TPZFMatrix<REAL>  X_epsP;
     
-    XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
-    
     TPZFMatrix<REAL> res(2,1,0.);
     TPZFMatrix<REAL> hessian(2,2,0.);
+    
+    XvalvsEpsPlasticdata(active, epsPV_data, I1data, SqJ2data, X_data, X_epsP);
+    
+    REAL d_val = ComputeDval_initial(active);
+    SetDval(d_val);
+    
+    REAL w_val = ComputeWval_initial(active);
+    SetWval(w_val);
+    
+    SetiWval(log(w_val*d_val));
     
     REAL error = AssembleDW(active, X_epsP, hessian, res);
     
@@ -704,10 +697,10 @@ void TF2DSAdjust::AdjustDW(TPZVec<TTestSection> &active)
 
 STATE TF2DSAdjust::DWcostFunction(REAL &X, REAL &depsPv){
     
-    REAL Dvalue = Dval();
-    REAL Wvalue = Wval();
+    REAL Dvalue  = Dval();
+    REAL iWvalue = iWval();
     
-    STATE cost = -Wvalue - Dvalue*X + log(depsPv);
+    STATE cost = -iWvalue - Dvalue*X + log(depsPv);
     return cost;
 }
 
@@ -715,8 +708,8 @@ void TF2DSAdjust::LoadCorrectionDW(TPZFMatrix<REAL> &delx)
 {
     REAL d_val = Dval()+delx(0,0);
     SetDval(d_val);
-    REAL w_val = Wval()+delx(1,0);
-    SetWval(w_val);
+    REAL iw_val = iWval()+delx(1,0);
+    SetiWval(iw_val);
     
 }
 

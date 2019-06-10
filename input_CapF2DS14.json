@@ -1,8 +1,8 @@
 [
-  ["open", "CP14Oedometric.txt", "CP14Oedometric"],
+  ["open", "CP14OedomModified.txt", "CP14OedomModified"],
   ["model", "CapDSplasticity", "CapDSparameters"],
-  ["select", "CP14Oedometric", 6620, 9618, "loading"],
+  ["select", "CP14OedomModified", 0, 29, "loading"],
   ["adjust", "D"],
-  ["assign","D","CP14Oedometric"],
+  ["assign","D","CP14OedomModified"],
   ["clear"]
 ]

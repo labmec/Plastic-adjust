@@ -81,8 +81,8 @@ void TElasticAdjust::Adjust(TPZVec<TTestSection> &active)
     }
     
     /// The final post process
-    bool isHydrostatic = false;
-    bool isoedometric = true;
+    bool isHydrostatic = true;
+    bool isoedometric = false;
     
     if (isHydrostatic) {
         std::cout<<"The results of Hydrostatic test"<<endl;

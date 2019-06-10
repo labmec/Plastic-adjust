@@ -165,11 +165,13 @@ void TTestData::GetData(int64_t first, int64_t last, TPZFMatrix<double> &deform,
     stress.Redim(last-first+1,2);
     for(int64_t i=first; i<=last; i++)
     {
-        deform(i-first,0) = fDeform(i,0)*0.01;
-        deform(i-first,1) = fDeform(i,1)*0.01;
-        stress(i-first,0) = fStress(i,0);
-        stress(i-first,1) = this->fStress(i,1);
+        deform(i-first,0) = - fDeform(i,0)*0.01;
+        deform(i-first,1) = - fDeform(i,1)*0.01;
+        stress(i-first,0) = - fStress(i,0);
+        stress(i-first,1) = - (this->fStress(i,1));
     }
+    
+    
 }
 
 
@@ -178,7 +180,7 @@ void TTestData::GetInvStressData(int64_t first, int64_t last, TPZFMatrix<double>
     invariantStress.Redim(last-first+1,2);
     for(int64_t i=first; i<=last; i++)
     {
-        invariantStress(i-first,0) = fInvariantStress(i,0);
+        invariantStress(i-first,0) = - fInvariantStress(i,0);
         invariantStress(i-first,1) = this->fInvariantStress(i,1);
         
     }
