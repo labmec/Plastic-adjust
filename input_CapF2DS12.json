@@ -1,0 +1,8 @@
+[
+  ["open", "CP12Hydrostatic.txt", "CP12Hydrostatic"],
+  ["model", "CapDSplasticity", "CapDSparameters"],
+  ["select", "CP12Hydrostatic", 0, 21399, "loading"],
+  ["adjust", "D"],
+  ["assign","D","CP12Hydrostatic"],
+  ["clear"]
+]

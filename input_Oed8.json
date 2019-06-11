@@ -1,8 +1,8 @@
 [
-  ["open", "CP08Oedometric.txt", "CP08Oedometric"],
+  ["open", "CP13Oedometric.txt", "CP13Oedometric"],
   ["model", "elasticity", "elasticmodulus"],
-  ["select", "CP08Oedometric", 4200, 8824, "unloading"],
+  ["select", "CP13Oedometric", 2598, 4208, "unloading"],
   ["adjust", "M"],
-  ["assign","M","CP08Oedometric"],
+  ["assign","M","CP13Oedometric"],
   ["clear"]
 ]

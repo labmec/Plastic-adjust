@@ -7,7 +7,7 @@
 #include "telasticmodel.h"
 
 #include "TElasticAdjust.h"
-#include "TF2DSAdjust.h"
+#include "TF2DSAdjust_DW.h"
 
 
 
@@ -71,9 +71,9 @@ void adjust(std::string parameter) {
     if(glob.fAdjust == DiMaggioSandlerF2Response)
     {
         
-        TF2DSAdjust model;
-        model.PopulateDW();
-        model.AdjustDW(glob.fActive);
+        TF2DSAdjust_DW model;
+        model.PopulateElastic();
+        model.PlotXvsEpsPv(glob.fActive);
                 
         {
             int nactive = glob.fActive.size();
