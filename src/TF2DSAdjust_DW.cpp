@@ -9,6 +9,7 @@
 #include <math.h>
 #include "TF2DSAdjust_DW.h"
 #include "StubFunctions.h"
+#include "nlopt.hpp"
 
 
 TF2DSAdjust_DW::TF2DSAdjust_DW(){
@@ -54,7 +55,7 @@ TF2DSAdjust_DW::~TF2DSAdjust_DW(){
 /// Second: Select the right data of X vs epsPv from last step to adjust D and W
 
 
-/// ************************ First Setp
+/// ************************ First Setp ************************
 void TF2DSAdjust_DW::ComputedElasticStrain(TPZVec<TTestSection> &active, std::vector<REAL> &epsEV_data)
 {
     REAL K = m_Kbulk;
@@ -177,7 +178,7 @@ void TF2DSAdjust_DW::PlotXvsEpsPv(TPZVec<TTestSection> &active)
 
 
 
-/// ************************ Second Setp
+/// ************************ Second Setp ************************
 
 
 void TF2DSAdjust_DW::PopulateDW()
@@ -204,7 +205,6 @@ void TF2DSAdjust_DW::PopulateDW()
     SetDval(d_val);
     
     REAL w_val = ComputeWval_initial();
-    
     REAL iwval = log(d_val*w_val);
     SetiWval(iwval);
     
@@ -252,17 +252,119 @@ REAL TF2DSAdjust_DW::ComputeWval_initial(){
 }
 
 
+STATE TF2DSAdjust_DW::errorfunctionDW(const std::vector<STATE> &input)
+{
+    STATE Dvalue   = input[0];
+    STATE iWvalue  = input[1];
+    STATE errorDW  = 0;
+    int64_t n_data = m_X_epsPv.Rows();
+    
+    for(int i=1; i<n_data; i++)
+    {
+        REAL xval    = m_X_epsPv(i,0);
+        REAL depsPvX = (m_X_epsPv(i,1)-m_X_epsPv(i-1,1))/(m_X_epsPv(i,0)-m_X_epsPv(i-1,0));
+        STATE minDW  = -iWvalue - Dvalue*xval + log(depsPvX);
+        errorDW += minDW*minDW;
+    }
+    return errorDW;
+}
+
+
+void TF2DSAdjust_DW::gradientfunctionDW(const std::vector<STATE> &input, std::vector<double> &grad)
+{
+    STATE Dvalue   = input[0];
+    STATE iWvalue  = input[1];
+    int64_t n_data = m_X_epsPv.Rows();
+    
+    STATE grad0 = 0.;
+    STATE grad1 = 0.;
+    
+    for(int i=1; i<n_data; i++)
+    {
+        REAL xval    = m_X_epsPv(i,0);
+        REAL depsPvX = (m_X_epsPv(i,1)-m_X_epsPv(i-1,1))/(m_X_epsPv(i,0)-m_X_epsPv(i-1,0));
+        
+        grad0 += -2*xval*(-iWvalue - Dvalue*xval + log(depsPvX));
+        grad1 += -2*(-iWvalue - Dvalue*xval + log(depsPvX));
+    }
+    
+    grad[0] = grad0;
+    grad[1] = grad1;
+
+}
+
+
+double myvfunctionDW(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
+{
+    TF2DSAdjust_DW *loc = (TF2DSAdjust_DW *) my_func_data;
+    
+    if (!grad.empty()) {
+        
+        loc->gradientfunctionDW(x, grad);
+    }
+    
+    double err = loc->errorfunctionDW(x);
+    for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
+    std::cout << "error = " << err << std::endl;
+    return err;
+}
+
+
+/// NLopt functions are: LN_BOBYQA,LD_TNEWTON, LD_TNEWTON_RESTART
+
+void TF2DSAdjust_DW::AdjustDW()
+{
+    nlopt::opt opt(nlopt::LD_TNEWTON, 2);
+    opt.set_min_objective(myvfunctionDW, this);
+    opt.set_xtol_rel(1e-6);
+    std::vector<double> x(2,0.);
+    std::vector<double> lb(2);
+    lb[0] = 0.;
+    lb[1] = 2.*iWval();
+    opt.set_lower_bounds(lb);
+    std::vector<double> ub(2);
+    ub[0] = 2.*Dval();
+    ub[1] = 0.;
+    opt.set_upper_bounds(ub);
+    
+    /// Initialize the D and iW that is iw = Log (D*W) value
+    x[0] = Dval();
+    x[1] = iWval();
+    
+    double minf;
+    
+    try{
+        nlopt::result result = opt.optimize(x, minf);
+        
+        if (result < 0) {
+            std::cerr << "nlopt failed: result = " << result << std::endl;
+        } else {
+            
+            std::cout << std::endl;
+            std::cout << "found minimum of F2 parameters: ";
+            for(int i=1; i<x.size(); i++)
+                std::cout << "D = " << x[i-1] << ", " << "W = " << (exp(x[i]))/(x[i-1]) << std::endl;
+            std::cout << std::endl;
+            std::cout<< std::setprecision(10) << "min_val = " << minf << std::endl;
+        }
+    }
+    catch(std::exception &e) {
+        std::cout << "nlopt failed: " << e.what() << std::endl;
+    }
+    
+}
+
+
 
 void TF2DSAdjust_DW::Hessian_DW(TPZFMatrix<REAL> &Hessian, REAL &X, REAL &depsPvX){
     
     Hessian.Resize(2,2);
     Hessian.Zero();
     
-    Hessian(0,0) += 2.;
+    Hessian(0,0) += 2*pow(X,2);
     Hessian(0,1) += 2*X;
     Hessian(1,0) += 2*X;
-    Hessian(1,1) += 2*pow(X,2);
-    
+    Hessian(1,1) += 2.0;
 }
 
 
@@ -271,9 +373,8 @@ void TF2DSAdjust_DW::Residual_DW(TPZFMatrix<REAL> &Residual, REAL &X, REAL &deps
     Residual.Resize(2,1);
     Residual.Zero();
     
-    Residual(0,0) += -2*(-m_iWval - m_Dval*X + log(depsPvX));
-    Residual(1,0) += -2*X*(-m_iWval - m_Dval*X + log(depsPvX));
-    
+    Residual(0,0) += -2*X*(-m_iWval - m_Dval*X + log(depsPvX));
+    Residual(1,0) += -2*(-m_iWval - m_Dval*X + log(depsPvX));
 }
 
 
@@ -299,7 +400,7 @@ STATE TF2DSAdjust_DW::AssembleDW(TPZFMatrix<REAL> &X_epsPv, TPZFMatrix<REAL> &he
         REAL xval   = X_epsPv(i,0);
         REAL depsPvX = (X_epsPv(i,1)-X_epsPv(i-1,1))/(X_epsPv(i,0)-X_epsPv(i-1,0));
         
-        STATE minDW = costFunction_DW(xval, depsPvX);
+        STATE minDW = CostFunction_DW(xval, depsPvX);
         
         Hessian_DW(hessianMatrix, xval, depsPvX);
         Residual_DW(residual, xval, depsPvX);
@@ -313,9 +414,17 @@ STATE TF2DSAdjust_DW::AssembleDW(TPZFMatrix<REAL> &X_epsPv, TPZFMatrix<REAL> &he
     return errorDW;
 }
 
+STATE TF2DSAdjust_DW::CostFunction_DW(REAL &X, REAL &depsPvX){
+    
+    REAL Dvalue  = Dval();
+    REAL iWvalue = iWval();
+    
+    STATE cost = -iWvalue - Dvalue*X + log(depsPvX);
+    return cost;
+}
 
 
-void TF2DSAdjust_DW::AdjustDW()
+void TF2DSAdjust_DW::AdjustDW2()
 {
  
     TPZFMatrix<REAL> X_epsP = m_X_epsPv;
@@ -349,24 +458,19 @@ void TF2DSAdjust_DW::AdjustDW()
         count++;
     }
     
+    REAL iwval = iWval();
+    REAL dval  = Dval();
+    REAL w_val = exp(iwval)/dval;
+    
     std::cout << std::endl;
     std::cout << "found minimum of F2 parameters: ";
     std::cout << "D = (" << Dval() << ")"<< std::endl;
     std::cout << std::endl;
-    std::cout << "W = (" << Wval() << ")"<< std::endl;
+    std::cout << "W = (" << w_val << ")"<< std::endl;
     std::cout << std::endl;
     std::cout.flush();
 }
 
-
-STATE TF2DSAdjust_DW::costFunction_DW(REAL &X, REAL &depsPvX){
-    
-    REAL Dvalue  = Dval();
-    REAL iWvalue = iWval();
-    
-    STATE cost = -iWvalue - Dvalue*X + log(depsPvX);
-    return cost;
-}
 
 void TF2DSAdjust_DW::LoadCorrection_DW(TPZFMatrix<REAL> &delx)
 {

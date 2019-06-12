@@ -50,13 +50,11 @@ public:
         m_Kbulk = K;
     }
     
-    
     /// Get the D value
     REAL Dval(){return m_Dval;}
     
     /// Set the D value
     void SetDval(REAL dval){m_Dval = dval;}
-    
     
     /// Get the W value
     REAL Wval(){return m_Wval;}
@@ -70,17 +68,13 @@ public:
     /// Set the (iW = Log(DW)) value
     void SetiWval(REAL iwval){m_iWval = iwval;}
     
-    
 
-    
-    ///*********************************************************
     
     /// Method to compute elastic strain
     void ComputedElasticStrain(TPZVec<TTestSection> &active, std::vector<REAL> &epsEV_data);
     
     /// Method to compute plastic strain
     void ComputedPlasticStrain(TPZVec<TTestSection> &active, std::vector<REAL> &epsPV_data);
-    
     
     /// Sumation of two vector a and b
     std::vector<REAL> a_subtract_b(std::vector<REAL> & a, std::vector<REAL> & b);
@@ -94,9 +88,8 @@ public:
     /// Plot  X vs epsPv
     void PlotXvsEpsPv(TPZVec<TTestSection> &active);
     
-    
-    ///*********************************************************
 
+    
     /// Method to initialize the class for L with possible data
     void PopulateDW();
     
@@ -105,6 +98,15 @@ public:
     
     /// Analytical function to compute the W value
     REAL ComputeWval_initial();
+    
+    /// Method to represent the error of object function for NLopt
+    STATE errorfunctionDW(const std::vector<STATE> &input);
+    
+    /// Method to represent the gradient of object function for NLopt
+    void gradientfunctionDW(const std::vector<STATE> &input, std::vector<double> &grad);
+    
+    /// Method to adjust the parameters D and W using NLopt libarary
+    void AdjustDW();
     
     
     /// Second derivative (Hessian) of objective function for parameters D and W
@@ -117,12 +119,10 @@ public:
     STATE AssembleDW(TPZFMatrix<REAL> &X_epsPv, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
     
     /// Method to make cost function for parameters D and W
-    STATE costFunction_DW(REAL &X, REAL &depsPvX);
+    STATE CostFunction_DW(REAL &X, REAL &depsPvX);
     
-        
     /// Method to adjust the parameters D and W using Quasi-Newton method
-    void AdjustDW();
-    
+    void AdjustDW2();
     
     /// Method to modifiy the parameters D and W
     void LoadCorrection_DW(TPZFMatrix<REAL> &delx);

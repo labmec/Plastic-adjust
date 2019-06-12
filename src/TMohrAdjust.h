@@ -41,15 +41,6 @@ public:
     /// Destructor
     ~TMohrAdjust();
     
-    /// Method to initialize the class with possible data
-    void Populate();
-    
-    /// Function to represent tan(phi)
-    REAL compute_phi();
-    
-    /// Function to represent cohesion
-    REAL compute_coh();
-    
     /// Get the cohesion
     REAL Cohval(){return m_coh;}
     
@@ -62,11 +53,24 @@ public:
     /// Set the friction
     void SetPhival(REAL friction){m_phi = friction;}
     
-    /// Method to represent the error of cost function
-    STATE errorfunction(const std::vector<STATE> &input);
+    /// Method to initialize the class with possible data
+    void Populate();
     
-    /// Method to adjust the parameters using NEWUOA unconstrained optimization (NLopt)
+    /// Function to represent tan(phi)
+    REAL compute_phi_initial();
+    
+    /// Function to represent cohesion
+    REAL compute_coh_initial();
+    
+    /// Method to represent the error of cost function for NLopt
+    STATE errorfunctionMC(const std::vector<STATE> &input);
+    
+    /// Method to represent the gradient of object function for NLopt
+    void gradientfunctionMC(const std::vector<STATE> &input, std::vector<double> &grad);
+    
+    /// Method to adjust the parameters phi and coh using NLopt libarary
     void Adjust();
+    
     
     /// Second derivative (Hessian) of objective function
     void Hessian(TPZFMatrix<REAL> &Residual, REAL signVal, REAL tauVal);

@@ -62,9 +62,9 @@ void TMohrAdjust::Populate()
     }
     
     /// Initial guess
-    REAL phi_val = compute_phi();
+    REAL phi_val = compute_phi_initial();
     SetPhival(phi_val);
-    REAL coh_val = compute_coh();
+    REAL coh_val = compute_coh_initial();
     SetCohval(coh_val);
     
     m_mohr.SetPhi(phi_val);
@@ -75,7 +75,7 @@ void TMohrAdjust::Populate()
 }
 
 
-REAL TMohrAdjust::compute_phi(){
+REAL TMohrAdjust::compute_phi_initial(){
     
     TPZFMatrix<REAL> sign_tau = m_sign_tau;
     int64_t n_data = m_sign_tau.Rows();
@@ -93,7 +93,7 @@ REAL TMohrAdjust::compute_phi(){
 }
 
 
-REAL TMohrAdjust::compute_coh(){
+REAL TMohrAdjust::compute_coh_initial(){
     
     TPZFMatrix<REAL> sign_tau  = m_sign_tau;
     int64_t n_data = m_sign_tau.Rows();
@@ -111,7 +111,7 @@ REAL TMohrAdjust::compute_coh(){
 
 
 
-STATE TMohrAdjust::errorfunction(const std::vector<STATE> &input)
+STATE TMohrAdjust::errorfunctionMC(const std::vector<STATE> &input)
 {
     
     REAL friction = input[0];
@@ -132,19 +132,45 @@ STATE TMohrAdjust::errorfunction(const std::vector<STATE> &input)
     return errorMC;
 }
 
-
+void TMohrAdjust::gradientfunctionMC(const std::vector<STATE> &input, std::vector<double> &grad)
+{
+    STATE phi   = input[0];
+    STATE coh   = input[1];
+    int64_t n_data = m_sign_tau.Rows();
+    
+    STATE grad0 = 0.;
+    STATE grad1 = 0.;
+    
+    for(int i=1; i<n_data; i++)
+    {
+        REAL sign = m_sign_tau(i,0);
+        REAL tau  = m_sign_tau(i,1);
+        
+        grad0 += -2*sign*pow((1/cos(phi)),2)*(-m_coh+tau-sign*tan(phi));
+        grad1 += -2*(-coh+tau-sign*tan(phi));
+    }
+    
+    grad[0] = grad0;
+    grad[1] = grad1;
+    
+}
 
 double myvfunctionMC(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
 {
-    if (!grad.empty()) {
-        DebugStop();
-    }
     TMohrAdjust *loc = (TMohrAdjust *) my_func_data;
-    double err = loc->errorfunction(x);
+    if (!grad.empty()) {
+        
+        loc->gradientfunctionMC(x, grad);
+    }
+    
+    double err = loc->errorfunctionMC(x);
     for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
     std::cout << "error = " << err << std::endl;
     return err;
 }
+
+
+/// NLopt functions are: LN_NEWUOA_BOUND, LN_NEWUOA, LN_PRAXIS, LD_SLSQP
 
 void TMohrAdjust::Adjust()
 {
@@ -176,9 +202,10 @@ void TMohrAdjust::Adjust()
         } else {
             
             std::cout << std::endl;
-            std::cout << "found minimum of MC parameters: (phi, cohesion) = (";
-            for(int i=0; i<x.size(); i++) std::cout << x[i] << "), (";
-            std::cout << ")" << std::endl;
+            std::cout << "found minimum of MC parameters : ";
+            for(int i=1; i<x.size(); i++)
+                std::cout << "phi = " << x[i-1] << ", " << "cohesion = " << x[i] << std::endl;
+            std::cout << std::endl;
             std::cout<< std::setprecision(10) << "min_val = " << minf << std::endl;
         }
     }

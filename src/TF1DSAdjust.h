@@ -42,9 +42,6 @@ public:
     /// Destructor
     ~TF1DSAdjust();
     
-    /// Method to initialize the class with possible data
-    void Populate();
-    
     
     /// Get the A value
     REAL Aval(){return m_Aval;}
@@ -64,6 +61,10 @@ public:
     /// Set the C value
     void SetCval(REAL cval){m_Cval = cval;}
     
+    
+    /// Method to initialize the class with possible data
+    void Populate();
+    
     /// Analytical function to represent mean value of B
     REAL ComputeBval_initial();
     
@@ -73,10 +74,13 @@ public:
     /// Analytical function to represent mean value of A
     REAL ComputeAval_initial();
     
-    /// Method to represent the error of cost function
-    STATE errorfunction(const std::vector<STATE> &input);
+    /// Method to represent the error of object function for NLopt
+    STATE errorfunctionF1(const std::vector<STATE> &input);
     
-    /// Method to adjust the parameters using NEWUOA unconstrained optimization (NLopt)
+    /// Method to represent the gradient of object function for NLopt
+    void gradientfunctionF1(const std::vector<STATE> &input, std::vector<double> &grad);
+
+    /// Method to adjust the parameters using NLopt optimization libarary
     void Adjust();
     
     

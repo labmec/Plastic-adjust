@@ -10,6 +10,7 @@
 #include <math.h>
 #include "StubFunctions.h"
 #include "TF1DSAdjust.h"
+#include "nlopt.hpp"
 
 
 
@@ -84,6 +85,26 @@ void TF2DSAdjust_R::PopulateR()
     
 }
 
+
+STATE TF2DSAdjust_R::errorfunctionF2_R(const std::vector<STATE> &input)
+{
+    TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
+    int64_t n_data = m_I1_SqJ2.Rows();
+
+    STATE errorF2=0;
+
+    for(int i=0; i<n_data; i++)
+    {
+        STATE minF2 = CapFunction(I1_SqJ2(i,0), I1_SqJ2(i,1));
+
+        errorF2 += minF2*minF2;
+
+    }
+
+    return errorF2;
+}
+
+
 STATE TF2DSAdjust_R::CapFunction(STATE &I1, STATE &SqJ2){
     
     STATE A     = m_Sandler.A();
@@ -105,23 +126,99 @@ STATE TF2DSAdjust_R::CapFunction(STATE &I1, STATE &SqJ2){
     
 }
 
-//STATE TF2DSAdjust_R::errorfunctionF2(const std::vector<STATE> &input)
-//{
-//    TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
-//    int64_t n_data = m_I1_SqJ2.Rows();
-//
-//    STATE errorF2=0;
-//
-//    for(int i=0; i<n_data; i++)
-//    {
-//        STATE minF2 = CapFunction(I1_SqJ2(i,0), I1_SqJ2(i,1));
-//
-//        errorF2 += minF2*minF2;
-//
-//    }
-//
-//    return errorF2;
-//}
+void TF2DSAdjust_R::gradientfunctionF2_R(const std::vector<STATE> &input, std::vector<double> &grad)
+{
+    STATE L   = input[0];
+    STATE R   = input[1];
+    int64_t n_data = m_I1_SqJ2.Rows();
+    
+    STATE Aval = m_Sandler.A();
+    STATE Bval = m_Sandler.B();
+    STATE Cval = m_Sandler.C();
+    
+    STATE grad0 = 0.;
+    STATE grad1 = 0.;
+    
+    for(int i=1; i<n_data; i++)
+    {
+        REAL I1val    = m_I1_SqJ2(i,0);
+        REAL SqJ2Val  = m_I1_SqJ2(i,1);
+        
+        
+        grad0 += 2*((-2*(I1val - L))/(pow(Aval - Cval*exp(Bval*L),2)*pow(R,2)) +
+                    (2*Bval*Cval*exp(Bval*L)*pow(I1val - L,2))/(pow(Aval - Cval*exp(Bval*L),3)*pow(R,2)) +
+                    (2*Bval*Cval*exp(Bval*L)*pow(SqJ2Val,2))/pow(Aval - Cval*exp(Bval*L),3))*
+        (-1 + pow(I1val - L,2)/(pow(Aval - Cval*exp(Bval*L),2)*pow(R,2)) + pow(SqJ2Val,2)/pow(Aval - Cval*exp(Bval*L),2));
+        
+        grad1 += (-4*pow(I1val - L,2)*(-1 + pow(I1val - L,2)/(pow(Aval - Cval*exp(Bval*L),2)*pow(R,2)) + pow(SqJ2Val,2)/pow(Aval - Cval*exp(Bval*L),2)))/
+        (pow(Aval - Cval*exp(Bval*L),2)*pow(R,3));
+    }
+    
+    grad[0] = grad0;
+    grad[1] = grad1;
+    
+}
+
+
+double myvfunctionR(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
+{
+    TF2DSAdjust_R *loc = (TF2DSAdjust_R *) my_func_data;
+    
+    if (!grad.empty()) {
+        
+        loc->gradientfunctionF2_R(x, grad);
+    }
+    
+    double err = loc->errorfunctionF2_R(x);
+    for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
+    std::cout << "error = " << err << std::endl;
+    return err;
+}
+
+/// NLopt functions are: LN_BOBYQA,LD_TNEWTON, LD_TNEWTON_RESTART
+
+void TF2DSAdjust_R::AdjustR()
+{
+    nlopt::opt opt(nlopt::LD_TNEWTON, 2);
+    opt.set_min_objective(myvfunctionR, this);
+    opt.set_xtol_rel(1e-6);
+    std::vector<double> x(2,0.);
+    std::vector<double> lb(2);
+    lb[0] = 2.*Lval();
+    lb[1] = 0.;
+    opt.set_lower_bounds(lb);
+    std::vector<double> ub(2);
+    ub[0] = 0.;
+    ub[1] = 2.*Rval();
+    opt.set_upper_bounds(ub);
+    
+    /// Initialize the L and R value
+    x[0] = Lval();
+    x[1] = Rval();
+    
+    double minf;
+    
+    try{
+        nlopt::result result = opt.optimize(x, minf);
+        
+        if (result < 0) {
+            std::cerr << "nlopt failed: result = " << result << std::endl;
+        } else {
+            
+            std::cout << std::endl;
+            std::cout << "found minimum of F2 parameters: ";
+            for(int i=1; i<x.size(); i++)
+                std::cout << "D = " << x[i-1] << ", " << "W = " << (exp(x[i]))/(x[i-1]) << std::endl;
+            std::cout << std::endl;
+            std::cout<< std::setprecision(10) << "min_val = " << minf << std::endl;
+        }
+    }
+    catch(std::exception &e) {
+        std::cout << "nlopt failed: " << e.what() << std::endl;
+    }
+    
+}
+
 
 
 void TF2DSAdjust_R::Hessian_R(TPZFMatrix<REAL> & Hessian, REAL I1val, REAL SqJ2Val){
@@ -214,7 +311,7 @@ STATE TF2DSAdjust_R::AssembleR(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hess
     return errorR;
 }
 
-void TF2DSAdjust_R::AdjustR()
+void TF2DSAdjust_R::AdjustR2()
 {
     TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
     TPZFMatrix<REAL> res(2,1,0.);

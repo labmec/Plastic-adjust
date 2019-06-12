@@ -135,7 +135,7 @@ REAL TF1DSAdjust::ComputeAval_initial(){
     return sum_A_val/n_data;
 }
 
-STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
+STATE TF1DSAdjust::errorfunctionF1(const std::vector<STATE> &input)
 {
     STATE B = input[0];
     STATE C = input[1];
@@ -159,22 +159,56 @@ STATE TF1DSAdjust::errorfunction(const std::vector<STATE> &input)
     return errorF1;
 }
 
+void TF1DSAdjust::gradientfunctionF1(const std::vector<STATE> &input, std::vector<double> &grad)
+{
+    STATE B = input[0];
+    STATE C = input[1];
+    STATE A = input[2];
+
+    int64_t n_data = m_I1_SqJ2.Rows();
+    
+    STATE grad0 = 0.;
+    STATE grad1 = 0.;
+    STATE grad2 = 0.;
+    
+    for(int i=1; i<n_data; i++)
+    {
+        REAL I1val   = m_I1_SqJ2(i,0);
+        REAL SqJ2Val = m_I1_SqJ2(i,1);
+        
+        grad0 += 2*(A-C*exp(B*I1val)-SqJ2Val);
+        grad1 += -2*C*exp(B*I1val)*I1val*(A-C*exp(B*I1val)-SqJ2Val);
+        grad2 += -2*exp(B*I1val)*(A-C*exp(B*I1val)-SqJ2Val);
+    }
+    
+    grad[0] = grad0;
+    grad[1] = grad1;
+    grad[2] = grad2;
+    
+}
+
 
 double myvfunctionF1(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data)
 {
-    if (!grad.empty()) {
-        DebugStop();
-    }
     TF1DSAdjust *loc = (TF1DSAdjust *) my_func_data;
-    double err = loc->errorfunction(x);
+    
+    if (!grad.empty()) {
+        
+        loc->gradientfunctionF1(x, grad);
+    }
+    
+    double err = loc->errorfunctionF1(x);
     for(int i=0; i<x.size(); i++) std::cout << "x[" << i << "]= " << x[i] << " ";
     std::cout << "error = " << err << std::endl;
     return err;
 }
 
+
+/// NLopt functions are: LN_NEWUOA_BOUND, LN_BOBYQA
+
 void TF1DSAdjust::Adjust()
 {
-    nlopt::opt opt(nlopt::LN_NEWUOA_BOUND, 3);
+    nlopt::opt opt(nlopt::LD_TNEWTON, 3);
     opt.set_min_objective(myvfunctionF1, this);
     opt.set_xtol_rel(1e-6);
     std::vector<double> x(3,0.);
@@ -185,7 +219,6 @@ void TF1DSAdjust::Adjust()
     ub[0] = 2.*Bval();
     ub[1] = 2.*Cval();
     ub[2] = 2.*Aval();
-    
     opt.set_upper_bounds(ub);
     
     /// Initialize the B and C value
@@ -203,9 +236,10 @@ void TF1DSAdjust::Adjust()
         } else {
             
         std::cout << std::endl;
-        std::cout << "found minimum of F1 parameters: (B, C, A) = (";
-        for(int i=0; i<x.size(); i++) std::cout << x[i] << "), (";
-            std::cout << ")" << std::endl;
+        std::cout << "found minimum of F1 parameters : ";
+        for(int i=2; i<x.size(); i++)
+            std::cout << "B = " << x[i-2] << ", " << "C = " << x[i-1] << ", " << "A = " << x[i] << std::endl;
+            std::cout << std::endl;
             std::cout<< std::setprecision(10) << "min_val = " << minf << std::endl;
         }
     }
