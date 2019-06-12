@@ -58,9 +58,6 @@ public:
     /// Method to initialize the class for R with possible data
     void PopulateR();
     
-    /// Method to represent the Cap function
-    STATE CapFunction(STATE &I1, STATE &SqJ2);
-    
     /// Method to represent the error of cost function for NLopt
     STATE errorfunctionF2_R(const std::vector<STATE> &input);
     
@@ -88,6 +85,9 @@ public:
     
     /// Method to modifiy the parameter R
     void LoadCorrectionR(TPZFMatrix<REAL> &delx);
+    
+    /// Method to represent the Cap function
+    STATE CapFunction(STATE &I1, STATE &SqJ2);
     
     
 };

@@ -15,7 +15,8 @@
 /// Adjustment classes
 #include "TF1DSAdjust.h"
 #include "TMohrAdjust.h"
-#include "TF2DSAdjust.h"
+#include "TF2DSAdjust_DW.h"
+#include "TF2DSAdjust_R.h"
 
 
 using json = nlohmann::json;
@@ -34,30 +35,38 @@ TPZFMatrix<REAL> Read_Duplet(int n_data, std::string file);
 
 int main() {
     
-//    TF2DSAdjust F2;
-//    F2.PopulateR();
-//    F2.AdjustR();
-//    return 0;
     
-    LoadElastoPlasticModel();
+//    TF2DSAdjust_DW F2;
+//    F2.PopulateDW();
+//    F2.AdjustDW();
+//    
+//    return 0;
+//    
+    
+    TF2DSAdjust_R F2;
+    F2.PopulateR();
+    F2.AdjustR2();
     return 0;
+    
+//    LoadElastoPlasticModel();
+//    return 0;
     
 //    TF1DSAdjust F1;
 //    F1.Populate();
-//    F1.Adjust2();
+//    F1.Adjust();
 //    return 0;
     
     
 //    TMohrAdjust MC;
 //    MC.Populate();
-//    MC.Adjust2();
+//    MC.Adjust();
 //    return 0;
     
     
     std::string path;
     std::ifstream input;
 
-    path = "../input_Oed8.json";
+    path = "../input_CapF2DS12.json";
     input.open(path.c_str());
 
     while (!input.is_open()) {
@@ -149,10 +158,10 @@ void LoadElastoPlasticModel()
     
     // Experimental data
     std::string file_name;
-    file_name = "/Users/manouchehr/Documents/GitHub/Plastic-adjust/exp_data/CP08.txt";
-    int64_t n_data = 2000;
+    file_name = "/Users/manouchehr/Documents/GitHub/Plastic-adjust/exp_data/CP14.txt";
+    int64_t n_data = 2999;
     TPZFMatrix<REAL> data = Read_Duplet(n_data, file_name);
-    //    data.Print(std::cout);
+//     data.Print(std::cout);
     
     // DS Dimaggio Sandler PV
     TPZPlasticStepPV<TPZSandlerExtended, TPZElasticResponse> LEDS;
@@ -160,23 +169,24 @@ void LoadElastoPlasticModel()
     // LE Linear elastic response
     TPZElasticResponse ER;
     
+    /// number CP14
+    REAL E  = 2000; // MPa
+    REAL nu = 0.2; // MPa
     
-        /// number CP08
-        REAL E  = 2000.0; // MPa
-        REAL nu = 0.2; // MPa
+    STATE G = E / (2. * (1. + nu));
+    STATE K = E / (3. * (1. - 2 * nu));
+    REAL CA      = 18;
+    REAL CB      = 0.01;
+    REAL CC      = 16;
+    REAL CD      = 0.18;
+    REAL CR      = 2.0;
+    REAL CW      = 0.001;
+    REAL X_0     = -40.0;
+    REAL phi = 0, psi = 1., N = 0;
     
-        STATE G = E / (2. * (1. + nu));
-        STATE K = E / (3. * (1. - 2 * nu));
-        REAL CA      = 14.0;
-        REAL CB      = 0.020;
-        REAL CC      = 13.0;
-        REAL CD      = 0.013;
-        REAL CR      = 2.0;
-        REAL CW      = 0.04;
-        REAL X_0     = -40.0;
-        REAL phi = 0, psi = 1., N = 0;
+    REAL Pc = X_0/3.0;
     
-        REAL Pc = X_0/3.0;
+
     
     
     ER.SetEngineeringData(E, nu);

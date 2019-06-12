@@ -88,14 +88,25 @@ void TF2DSAdjust_R::PopulateR()
 
 STATE TF2DSAdjust_R::errorfunctionF2_R(const std::vector<STATE> &input)
 {
-    TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
+    STATE L   = input[0];
+    STATE R   = input[1];
     int64_t n_data = m_I1_SqJ2.Rows();
+    
+    STATE A   = m_Sandler.A();
+    STATE B   = m_Sandler.B();
+    STATE C   = m_Sandler.C();
+    STATE gamma = 1.0;
 
     STATE errorF2=0;
 
     for(int i=0; i<n_data; i++)
     {
-        STATE minF2 = CapFunction(I1_SqJ2(i,0), I1_SqJ2(i,1));
+        REAL I1val    = m_I1_SqJ2(i,0);
+        REAL SqJ2Val  = m_I1_SqJ2(i,1);
+        
+        STATE term1 = (I1val-L) / (R * (A-(C * exp(B * L))));
+        STATE term2 = (gamma * SqJ2Val) / (A-(C * exp(B * L)));
+        STATE minF2 = (term1 * term1 + term2 * term2 - 1);
 
         errorF2 += minF2*minF2;
 
@@ -105,26 +116,6 @@ STATE TF2DSAdjust_R::errorfunctionF2_R(const std::vector<STATE> &input)
 }
 
 
-STATE TF2DSAdjust_R::CapFunction(STATE &I1, STATE &SqJ2){
-    
-    STATE A     = m_Sandler.A();
-    STATE B     = m_Sandler.B();
-    STATE C     = m_Sandler.C();
-    STATE Lprev = Lval();
-    STATE R     = Rval();
-    
-    /// The original DiMaggio is considered then the gamma = 1.0
-    STATE gamma = 1.0;
-    STATE term1, term2;
-    
-    term1 = (I1-Lprev) / (R * (A-(C * exp(B * Lprev))));
-    term2 = (gamma * SqJ2) / (A-(C * exp(B * Lprev)));
-    
-    STATE f2 = (term1 * term1 + term2 * term2 - 1);
-    
-    return f2;
-    
-}
 
 void TF2DSAdjust_R::gradientfunctionF2_R(const std::vector<STATE> &input, std::vector<double> &grad)
 {
@@ -139,7 +130,7 @@ void TF2DSAdjust_R::gradientfunctionF2_R(const std::vector<STATE> &input, std::v
     STATE grad0 = 0.;
     STATE grad1 = 0.;
     
-    for(int i=1; i<n_data; i++)
+    for(int i=0; i<n_data; i++)
     {
         REAL I1val    = m_I1_SqJ2(i,0);
         REAL SqJ2Val  = m_I1_SqJ2(i,1);
@@ -175,27 +166,29 @@ double myvfunctionR(const std::vector<double> &x, std::vector<double> &grad, voi
     return err;
 }
 
-/// NLopt functions are: LN_BOBYQA,LD_TNEWTON, LD_TNEWTON_RESTART
+/// NLopt functions are: LD_SLSQP, LD_VAR1, LD_VAR2
 
 void TF2DSAdjust_R::AdjustR()
 {
-    nlopt::opt opt(nlopt::LD_TNEWTON, 2);
+    nlopt::opt opt(nlopt::LD_VAR2, 2);
     opt.set_min_objective(myvfunctionR, this);
     opt.set_xtol_rel(1e-6);
     std::vector<double> x(2,0.);
     std::vector<double> lb(2);
-    lb[0] = 2.*Lval();
+    lb[0] = 1.5*Lval();
     lb[1] = 0.;
     opt.set_lower_bounds(lb);
     std::vector<double> ub(2);
     ub[0] = 0.;
-    ub[1] = 2.*Rval();
+    ub[1] = 3.0*Rval();
     opt.set_upper_bounds(ub);
     
     /// Initialize the L and R value
     x[0] = Lval();
     x[1] = Rval();
-    
+    STATE Aval = m_Sandler.A();
+    STATE Bval = m_Sandler.B();
+    STATE Cval = m_Sandler.C();
     double minf;
     
     try{
@@ -207,8 +200,10 @@ void TF2DSAdjust_R::AdjustR()
             
             std::cout << std::endl;
             std::cout << "found minimum of F2 parameters: ";
+            std::cout << std::endl;
             for(int i=1; i<x.size(); i++)
-                std::cout << "D = " << x[i-1] << ", " << "W = " << (exp(x[i]))/(x[i-1]) << std::endl;
+                std::cout << "R = " << x[i] << ", " << "X0 = " << ComputeXval(Aval,Bval,Cval,x[i],x[i-1]) << std::endl;
+            
             std::cout << std::endl;
             std::cout<< std::setprecision(10) << "min_val = " << minf << std::endl;
         }
@@ -311,6 +306,7 @@ STATE TF2DSAdjust_R::AssembleR(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hess
     return errorR;
 }
 
+
 void TF2DSAdjust_R::AdjustR2()
 {
     TPZFMatrix<REAL> I1_SqJ2 = m_I1_SqJ2;
@@ -345,7 +341,8 @@ void TF2DSAdjust_R::AdjustR2()
     
     std::cout << std::endl;
     std::cout << "found minimum of F2 parameters: ";
-    std::cout << "R = (" << Rval() << ")"<< std::endl;
+    std::cout << std::endl;
+    std::cout << "R = " << Rval() << std::endl;
     
     STATE A  = m_Sandler.A();
     STATE B  = m_Sandler.B();
@@ -354,8 +351,8 @@ void TF2DSAdjust_R::AdjustR2()
     REAL l_0 = Lval();
     REAL X_0val = ComputeXval(A, B, C, r, l_0);
     
-    /// The following X0 value can be used in AdjustX0 to compute modified X0
-    std::cout << "Initial value of X0 = (" << X_0val << ")"<< std::endl;
+    /// Initial value of X0
+    std::cout << "X0 = " << X_0val << std::endl;
     std::cout << std::endl;
     std::cout.flush();
 }
@@ -365,6 +362,7 @@ STATE TF2DSAdjust_R::ComputeXval(STATE &a, STATE &b, STATE &c, STATE &r, STATE &
     STATE x = l-r*(a-c*exp(b*l));
     return x;
 }
+
 
 void TF2DSAdjust_R::LoadCorrectionR(TPZFMatrix<REAL> &delx)
 {
@@ -376,3 +374,23 @@ void TF2DSAdjust_R::LoadCorrectionR(TPZFMatrix<REAL> &delx)
 }
 
 
+STATE TF2DSAdjust_R::CapFunction(STATE &I1, STATE &SqJ2){
+    
+    STATE A     = m_Sandler.A();
+    STATE B     = m_Sandler.B();
+    STATE C     = m_Sandler.C();
+    STATE Lprev = Lval();
+    STATE R     = Rval();
+    
+    /// The original DiMaggio is considered then the gamma = 1.0
+    STATE gamma = 1.0;
+    STATE term1, term2;
+    
+    term1 = (I1-Lprev) / (R * (A-(C * exp(B * Lprev))));
+    term2 = (gamma * SqJ2) / (A-(C * exp(B * Lprev)));
+    
+    STATE f2 = (term1 * term1 + term2 * term2 - 1);
+    
+    return f2;
+    
+}
