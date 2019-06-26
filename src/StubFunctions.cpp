@@ -31,6 +31,10 @@ void model(std::string modelName, std::string test) {
     {
         glob.fAdjust = DiMaggioSandlerF2Response;
     }
+    if(modelName.compare("CapDSfindRinRHW") == 0)
+    {
+        glob.fAdjust = DiMaggioSandlerF2findRinRHW;
+    }
 }
 
 void select(std::string parameter, int initial, int final, std::string comment) {

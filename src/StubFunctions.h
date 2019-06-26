@@ -119,7 +119,7 @@ public:
     
 };
 
-enum EAdjustModel {EElasticResponse, DiMaggioSandlerF2Response};
+enum EAdjustModel {EElasticResponse, DiMaggioSandlerF2Response, DiMaggioSandlerF2findRinRHW};
 
 struct TGlob
 {
