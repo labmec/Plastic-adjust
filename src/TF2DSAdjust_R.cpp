@@ -54,8 +54,8 @@ void TF2DSAdjust_R::PopulateR()
     /// Render at least two points that touch the cap of DiMaggio-Sandler; temporary
     const int n_I1 = 2;
     
-    REAL I1_data[n_I1] = {-56.9677, -73.3605};
-    REAL F1_data[n_I1] = {0.0, 10.0713};
+    REAL I1_data[n_I1] = {-60.9707, -55.0043};
+    REAL F1_data[n_I1] = {0.530229, 6.07571};
     
     m_I1_SqJ2.Redim(n_I1,2);
     
@@ -78,9 +78,9 @@ void TF2DSAdjust_R::PopulateR()
     
     
     /// Initial guess for L and R parameters
-    REAL l_val = -60.9137409;
+    REAL l_val = -10.0;
     SetLval(l_val);
-    REAL r_val = 1.5;
+    REAL r_val = 1.0;
     SetRval(r_val);
     
 }
@@ -166,21 +166,21 @@ double myvfunctionR(const std::vector<double> &x, std::vector<double> &grad, voi
     return err;
 }
 
-/// NLopt functions are: LD_SLSQP, LD_VAR1, LD_VAR2
+/// NLopt functions are: LD_TNEWTON, LD_TNEWTON_RESTART, LD_TNEWTON_PRECOND, LD_TNEWTON_PRECOND_RESTART, LD_SLSQP, LD_VAR1, LD_VAR2
 
 void TF2DSAdjust_R::AdjustR()
 {
-    nlopt::opt opt(nlopt::LD_VAR2, 2);
+    nlopt::opt opt(nlopt::LD_TNEWTON, 2);
     opt.set_min_objective(myvfunctionR, this);
     opt.set_xtol_rel(1e-6);
     std::vector<double> x(2,0.);
     std::vector<double> lb(2);
-    lb[0] = 1.5*Lval();
+    lb[0] = 4.0*Lval();
     lb[1] = 0.;
     opt.set_lower_bounds(lb);
     std::vector<double> ub(2);
     ub[0] = 0.;
-    ub[1] = 3.0*Rval();
+    ub[1] = 4.0*Rval();
     opt.set_upper_bounds(ub);
     
     /// Initialize the L and R value
@@ -326,7 +326,7 @@ void TF2DSAdjust_R::AdjustR2()
     std::cout << "Incoming normres = " << normres << std::endl;
     REAL tol = normres*1.e-8;
     
-    while(normres > tol && count <10)
+    while(normres > tol && count <25)
     {
         hessian.SolveDirect(res,ELU);
         res *= -1.;
