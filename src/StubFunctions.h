@@ -34,15 +34,15 @@ public:
 
 private:
 
-    TPZFMatrix<double> fDeform;
-    TPZFMatrix<double> fStress;
-    TPZFMatrix<double> fInvariantStress;
+    TPZFMatrix<double> m_Deform;
+    TPZFMatrix<double> m_Stress;
+    TPZFMatrix<double> m_InvariantStress;
 
-    std::string fNickName;
+    std::string m_NickName;
 
-    std::string fFileName;
+    std::string m_FileName;
 
-    TPZVec<EDataType> fTypes;
+    TPZVec<EDataType> m_Types;
 
     // 0 -> sigr
     // 1 -> siga
@@ -50,7 +50,7 @@ private:
     // 3 -> epsa
     // 4 -> I1
     // 5 -> SqJ2
-    std::map<int,int> fRelevant;
+    std::map<int,int> m_Relevant;
     
     void ReadHeader(std::istream &input);
 
@@ -76,45 +76,45 @@ public:
 
 class TTestSection
 {
-    TTestData *fOrigin;
-    int64_t fFirst, fLast;
-    std::string fComment;
+    TTestData *m_Origin;
+    int64_t fFirst, m_Last;
+    std::string m_Comment;
 
 public:
 
-    TTestSection() : fOrigin(0), fFirst(-1), fLast(-1)
+    TTestSection() : m_Origin(0), fFirst(-1), m_Last(-1)
     {
 
     }
 
-    TTestSection(TTestData *orig, int64_t first, int64_t last, const std::string &comment) : fOrigin(orig), fFirst(first),
-        fLast(last), fComment(comment)
+    TTestSection(TTestData *orig, int64_t first, int64_t last, const std::string &comment) : m_Origin(orig), fFirst(first),
+        m_Last(last), m_Comment(comment)
     {
 
     }
 
-    TTestSection(const TTestSection &cp) : fOrigin(cp.fOrigin), fFirst(cp.fFirst), fLast(cp.fLast),fComment(cp.fComment)
+    TTestSection(const TTestSection &cp) : m_Origin(cp.m_Origin), fFirst(cp.fFirst), m_Last(cp.m_Last),m_Comment(cp.m_Comment)
     {
 
     }
 
     TTestSection &operator=(const TTestSection &cp)
     {
-        fOrigin  = cp.fOrigin;
+        m_Origin  = cp.m_Origin;
         fFirst   = cp.fFirst;
-        fLast    = cp.fLast;
-        fComment = cp.fComment;
+        m_Last    = cp.m_Last;
+        m_Comment = cp.m_Comment;
         return *this;
     }
 
     void GetData(TPZFMatrix<double> &deform, TPZFMatrix<double> &stress)
     {
-        fOrigin->GetData(fFirst,fLast,deform,stress);
+        m_Origin->GetData(fFirst,m_Last,deform,stress);
     }
     
     void GetInvStressData(TPZFMatrix<double> &invariantStress)
     {
-        fOrigin->GetInvStressData(fFirst,fLast,invariantStress);
+        m_Origin->GetInvStressData(fFirst,m_Last,invariantStress);
     }
     
 };
@@ -123,13 +123,13 @@ enum EAdjustModel {EElasticResponse, DiMaggioSandlerF2Response, DiMaggioSandlerF
 
 struct TGlob
 {
-    TPZStack<TTestSection> fActive;
+    TPZStack<TTestSection> m_Active;
 
     std::map<std::string,TTestData> fMeasure;
 
-    EAdjustModel fAdjust = EElasticResponse;
+    EAdjustModel m_Adjust = EElasticResponse;
 
-    TPZElasticResponse fER;
+    TPZElasticResponse m_ER;
     
     TPZSandlerExtended m_Sandler;
 };

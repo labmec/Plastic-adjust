@@ -14,7 +14,7 @@ TElasticAdjust::TElasticAdjust()
     
 }
 
-TElasticAdjust::TElasticAdjust(const TElasticAdjust &other) : fER(other.fER), fSig0(other.fSig0)
+TElasticAdjust::TElasticAdjust(const TElasticAdjust &other) : m_ER(other.m_ER), m_Sig0(other.m_Sig0)
 {
     
 }
@@ -25,8 +25,8 @@ const TElasticAdjust & TElasticAdjust::operator=(const TElasticAdjust &other)
     if(&other == this){
         return *this;
     }
-    fER = other.fER;
-    fSig0 = other.fSig0;
+    m_ER = other.m_ER;
+    m_Sig0 = other.m_Sig0;
     return *this;
 }
 
@@ -37,8 +37,8 @@ TElasticAdjust::~TElasticAdjust(){
 
 void TElasticAdjust::Compute(TPZVec<REAL> &eps, TPZVec<REAL> &sig, TPZVec<REAL> &dsigr, TPZVec<REAL> &dsiga)
 {
-    sig[0] = fER.Lambda()*(2.*eps[0]+eps[1])+2.*fER.Mu()*eps[0];
-    sig[1] = fER.Lambda()*(2.*eps[0]+eps[1])+2.*fER.Mu()*eps[1];
+    sig[0] = m_ER.Lambda()*(2.*eps[0]+eps[1])+2.*m_ER.Mu()*eps[0];
+    sig[1] = m_ER.Lambda()*(2.*eps[0]+eps[1])+2.*m_ER.Mu()*eps[1];
     dsigr[0] = 2.*eps[0]+eps[1];
     dsigr[1] = 2.*eps[0];
     dsigr[2] = 1.;
@@ -51,8 +51,8 @@ void TElasticAdjust::Compute(TPZVec<REAL> &eps, TPZVec<REAL> &sig, TPZVec<REAL> 
 
 void TElasticAdjust::Adjust(TPZVec<TTestSection> &active)
 {
-    fSig0.resize(2*active.size());
-    fSig0.Fill(0.);
+    m_Sig0.resize(2*active.size());
+    m_Sig0.Fill(0.);
     TPZFMatrix<REAL> res(2*(active.size()+1),1,0.);
     TPZFMatrix<REAL> tangent(res.Rows(),res.Rows(),0.);
     
@@ -87,15 +87,15 @@ void TElasticAdjust::Adjust(TPZVec<TTestSection> &active)
     if (isHydrostatic) {
         std::cout<<"The results of Hydrostatic test"<<endl;
         std::cout<<std::endl;
-        REAL Bulk = fER.K();
+        REAL Bulk = m_ER.K();
         std::cout << "Bulk = " << Bulk << std::endl;
         std::cout<<std::endl;
     } else if (isoedometric){
         cout<<"The results of oedometric test"<<endl;
         std::cout<<std::endl;
-        REAL Shear = fER.G();
-        REAL Bulk  = fER.K();
-        REAL Poisson  = fER.Poisson();
+        REAL Shear = m_ER.G();
+        REAL Bulk  = m_ER.K();
+        REAL Poisson  = m_ER.Poisson();
         REAL M_modulus = Bulk+((4*Shear)/3);
         std::cout << "M_modulus = " << M_modulus << std::endl;
         std::cout << "Poisson = " << Poisson << std::endl;
@@ -103,7 +103,7 @@ void TElasticAdjust::Adjust(TPZVec<TTestSection> &active)
     } else{
         std::cout<<"The results of triaxial test"<<endl;
         std::cout<<std::endl;
-        fER.Print(std::cout);
+        m_ER.Print(std::cout);
         std::cout<<std::endl;
     }
     std::cout.flush();
@@ -128,8 +128,8 @@ REAL TElasticAdjust::Assemble(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &ta
             sig_measure[0] = stress(d,0);
             sig_measure[1] = stress(d,1);
             Compute(eps,sig_c,dsigr,dsiga);
-            sig_c[0] += fSig0[i*2];
-            sig_c[1] += fSig0[i*2+1];
+            sig_c[0] += m_Sig0[i*2];
+            sig_c[1] += m_Sig0[i*2+1];
             TPZManVector<FADREAL,2> sigfad(2), diffmeasure(2);
             {
                 FADREAL a(4,sig_c[0]);
@@ -169,12 +169,12 @@ REAL TElasticAdjust::Assemble(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &ta
 
 void TElasticAdjust::LoadCorrection(TPZFMatrix<REAL> &delu)
 {
-    REAL lambda = fER.Lambda()+delu(0,0);
-    REAL mu = fER.Mu()+delu(1,0);
-    fER.SetLameData(lambda, mu);
-    for(int i=0; i<fSig0.size(); i++)
+    REAL lambda = m_ER.Lambda()+delu(0,0);
+    REAL mu = m_ER.Mu()+delu(1,0);
+    m_ER.SetLameData(lambda, mu);
+    for(int i=0; i<m_Sig0.size(); i++)
     {
-        fSig0[i] += delu(i+2,0);
+        m_Sig0[i] += delu(i+2,0);
     }
 }
 
@@ -192,8 +192,8 @@ void TElasticAdjust::ComputedSigma(TTestSection &sec, int i, TPZMatrix<REAL> &st
         eps[0] = deform(d,0);
         eps[1] = deform(d,1);
         Compute(eps,sig_c,dsigr,dsiga);
-        sig_c[0] += fSig0[i*2];
-        sig_c[1] += fSig0[i*2+1];
+        sig_c[0] += m_Sig0[i*2];
+        sig_c[1] += m_Sig0[i*2+1];
         stress(d,0) = sig_c[0];
         stress(d,1) = sig_c[1];
     }

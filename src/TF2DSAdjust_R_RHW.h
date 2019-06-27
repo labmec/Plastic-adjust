@@ -21,10 +21,10 @@ class TF2DSAdjust_R_RHW
 private:
     
     TPZSandlerExtended m_Sandler;
-    TPZFMatrix<STATE> m_I1_SqJ2;
+    TPZElasticResponse m_ER;
     
     REAL m_Lval;
-    REAL m_Rval;
+
     
     
 public:
@@ -41,53 +41,39 @@ public:
     /// Destructor
     ~TF2DSAdjust_R_RHW();
     
-    
     /// Get the L value
     REAL Lval(){return m_Lval;}
     
     /// Set the L value
     void SetLval(REAL lval){m_Lval = lval;}
     
-    /// Get the R value
-    REAL Rval(){return m_Rval;}
-    
-    /// Set the R value
-    void SetRval(REAL rval){m_Rval = rval;}
-    
-    
     /// Method to initialize the class for R with possible data
     void PopulateR();
     
-    /// Method to represent the error of cost function for NLopt
-    STATE errorfunctionF2_R(const std::vector<STATE> &input);
+    /// Method to compute strian and stress
+    void Compute(TPZVec<REAL> &eps, TPZVec<REAL> &eps_n, TPZVec<REAL> &sig, TPZVec<REAL> &sigtr);
     
-    /// Method to represent the gradient of object function for NLopt
-    void gradientfunctionF2_R(const std::vector<STATE> &input, std::vector<double> &grad);
+    /// Method to compute trial stress
+    void ComputedSigmaTr(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &stresstr);
     
-    /// Method to adjust the parameters using NLopt optimization libarary
-    void AdjustR();
+    /// Method to compute analytically the R value of DS
+    REAL ComputeR_analytic(STATE &sigst1, STATE &sigst2);
     
+    /// First derivative (Gradient) of objective function  for R (or jacobian)
+    void grad_R(REAL & gradient, REAL sigTst1, REAL sigTst2, REAL sigst1, REAL sigst2);
     
-    /// Second derivative (Hessian) of objective function for R
-    void Hessian_R(TPZFMatrix<REAL> & Hessian, REAL I1val, REAL SqJ2Val);
+    /// Objective function for R (or residual)
+    void res_R(REAL & residual, REAL sigTst1, REAL sigTst2, REAL sigst1, REAL sigst2);
     
-    /// First derivative (Gradient) of objective function  for R
-    void Residual_R(TPZFMatrix<REAL> &Residual, REAL I1val, REAL SqJ2Val);
+    /// Method to assemble gradient and Residual for R
+    void AdjustL(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &stresstr, TPZFMatrix<REAL> &Ldata);
     
-    /// Method to assemble Hessian and Residual for R
-    STATE AssembleR(TPZFMatrix<REAL> &I1_SqJ2, TPZFMatrix<REAL> &hessian, TPZFMatrix<REAL> &res);
+    /// Method to modifiy the parameter L
+    void LoadCorrectionL(REAL & delx);
     
-    /// Method to adjust the parameter R using Quasi-Newton method
-    void AdjustR2();
+    /// Method to adjust the parameter R using Gradient descent method
+    void AdjustR(TPZVec<TTestSection> &active);
     
-    /// Method to compute the X values (the inputs are A,B,C and R)
-    STATE ComputeXval(STATE &a, STATE &b, STATE &c, STATE &l, STATE &r);
-    
-    /// Method to modifiy the parameter R
-    void LoadCorrectionR(TPZFMatrix<REAL> &delx);
-    
-    /// Method to represent the Cap function
-    STATE CapFunction(STATE &I1, STATE &SqJ2);
     
     
 };

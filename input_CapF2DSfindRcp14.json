@@ -1,7 +1,7 @@
 [
   ["open", "CP14OedomModified.txt", "CP14OedomModified"],
   ["model", "CapDSfindRinRHW", "CapDSfindRinRHW"],
-  ["select", "CP14OedomModified", 0, 21399, "loading"],
+  ["select", "CP14OedomModified", 0, 29, "loading"],
   ["adjust", "R"],
   ["assign","R","CP14OedomModified"],
   ["clear"]

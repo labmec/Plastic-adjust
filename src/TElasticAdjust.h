@@ -23,8 +23,8 @@ public:
     
 private:
     
-    TPZElasticResponse fER;
-    TPZVec<REAL> fSig0;
+    TPZElasticResponse m_ER;
+    TPZVec<REAL> m_Sig0;
     
     REAL Assemble(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &tangent, TPZFMatrix<REAL> &res);
     void LoadCorrection(TPZFMatrix<REAL> &delu);
@@ -47,13 +47,13 @@ public:
     /// Method to present elastic response
     TPZElasticResponse ElasticResponse()
     {
-        return fER;
+        return m_ER;
     }
     
     /// Method to set elastic parameters
     void SetYoungPoisson(REAL E, REAL poisson)
     {
-        fER.SetEngineeringData(E, poisson);
+        m_ER.SetEngineeringData(E, poisson);
     }
     
     /// Method to compute sigma and dsigma
