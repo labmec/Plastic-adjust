@@ -1,8 +1,8 @@
 [
-  ["open", "CP14OedomModified.txt", "CP14OedomModified"],
+  ["open", "CP14Select.txt", "CP14Select"],
   ["model", "CapDSplasticity", "CapDSparameters"],
-  ["select", "CP14OedomModified", 0, 29, "loading"],
+  ["select", "CP14Select", 0, 30, "loading"],
   ["adjust", "D"],
-  ["assign","D","CP14OedomModified"],
+  ["assign","D","CP14Select"],
   ["clear"]
 ]

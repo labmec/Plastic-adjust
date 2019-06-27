@@ -48,8 +48,14 @@ void TF2DSAdjust_R_RHW::PopulateR()
     REAL b_val = 0.0284035;
     REAL c_val = 15.9158;
     
+    /// Oedometric loading (6620,9618)
     REAL E  = 2214.77;
     REAL nu = 0.25141;
+    
+    
+    /// Triaxial unloading (9618,9680)
+//    REAL E  = 5237.29;
+//    REAL nu = 0.239828;
     
     m_ER.SetEngineeringData(E, nu);
     
@@ -120,8 +126,8 @@ REAL TF2DSAdjust_R_RHW::ComputeR_analytic(STATE &sigst1, STATE &sigst2){
     
     STATE term1, term2;
     
-    term1 = (2*(pow(Lprev,2) - 2*sqrt(3)*Lprev*sigst1 + 3*pow(sigst1,2)));
-    term2 = (2*pow(A,2) - 4*A*C*exp(B*Lprev) + 2*pow(C,2)*exp(2*B*Lprev) - pow(sigst2,2));
+    term1 = 2*(pow(Lprev,2) - 2*sqrt(3)*Lprev*sigst1 + 3*pow(sigst1,2));
+    term2 = 2*pow(A,2) - 4*A*C*exp(B*Lprev) + 2*pow(C,2)*exp(2*B*Lprev) - pow(sigst2,2);
     
     STATE r = sqrt(term1/term2);
     
@@ -199,29 +205,52 @@ void TF2DSAdjust_R_RHW::AdjustL(TPZVec<TTestSection> &active, TPZFMatrix<REAL> &
             sigTst1 = (2*stress_meas(d,0)+stress_meas(d,1))/sqrt(3);
             sigTst2 = sqrt(2)*sqrt(((stress_meas(d,1)-stress_meas(d,0))*(stress_meas(d,1)-stress_meas(d,0)))/3);
             
+            /// To compute L in RHW, Newton and Gradient descent are implemented.
+            bool newton_method = true;
             
-            for (int j=0; j<20; j++) {
-                
-                res_R(residual,sigTst1,sigTst2,sigst1,sigst2);
-                grad_R(gradient,sigTst1,sigTst2,sigst1,sigst2);
-                
-                REAL term1 = residual;
-                REAL term2 = gradient;
-                
-                if (abs(term2)<=10e-10) {
-                    term2=10e-10;
+            int count = 0;
+            REAL mdif = 0.01;
+            REAL tol = mdif*1.e-6;
+            REAL gamma = 0.1;
+            
+            while(mdif > tol && count <20)
+            {
+                if (newton_method) {
+                    
+                    res_R(residual,sigTst1,sigTst2,sigst1,sigst2);
+                    grad_R(gradient,sigTst1,sigTst2,sigst1,sigst2);
+                    REAL term1 = residual;
+                    REAL term2 = gradient;
+                    
+                    if (abs(term2)<=1.0e-7)
+                    {
+                        if (term2<0.0){
+                            term2=-1.0e-7;}else{
+                            term2=1.0e-7;}
+                    }
+                    
+                    REAL delx  = - gamma*(term1/term2);
+                    
+                    LoadCorrectionL(delx);
+                    mdif = abs(delx);
+                    count++;
+                    
+                }else{
+                    
+                    grad_R(gradient,sigTst1,sigTst2,sigst1,sigst2);
+                    REAL term2 = gradient;
+                    
+                    REAL delx  = - gamma*(term2);
+                    LoadCorrectionL(delx);
+                    mdif = abs(delx);
+                    count++;
+
                 }
-                
-                REAL delx  = - term1/term2;
-                
-                LoadCorrectionL(delx);
             }
-            
+
             REAL lval  = Lval();
             Ldata(d,0) = lval;
         }
-        
-
     }
     
     Ldata.Print("Ldata = ", std::cout,EMathematicaInput);
