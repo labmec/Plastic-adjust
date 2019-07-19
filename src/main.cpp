@@ -27,14 +27,19 @@ void callMethods(json commandFile);
 void translateToFunction(json singleCommand);
 
 
+/// Method to compare the uniaxial loading test data with the DS matrial of PZ
+void LoadCompareDSModel();
+
 /// Method to present elastoplastic model
-void LoadElastoPlasticModel();
+void LoadDSModel();
 
 /// Method to present Mohr-Coulomb model
 void LoadMCModel();
 
 // Read experimental data
 TPZFMatrix<REAL> Read_Duplet(int n_data, std::string file);
+
+TPZFMatrix<STATE> readStressStrain(std::string &file_name);
 
 
 
@@ -53,7 +58,10 @@ int main() {
 //    F2.AdjustR();
 //    return 0;
     
-    LoadElastoPlasticModel();
+    LoadCompareDSModel();
+    return 0;
+    
+    LoadDSModel();
     return 0;
     
 //    LoadMCModel();
@@ -197,8 +205,7 @@ void LoadMCModel()
     TPZTensor<REAL> epsilon_t,sigma,sigma_target;
     sigma.Zero();
     epsilon_t.Zero();
-    
-    epsilon_t.Zero();
+
     
     TPZFNMatrix<701,STATE> LEMC_epsilon_stress(n_data,4);
     
@@ -221,9 +228,8 @@ void LoadMCModel()
     LEMC_epsilon_stress.Print("data = ", std::cout,EMathematicaInput);
 }
 
-void LoadElastoPlasticModel()
+void LoadDSModel()
 {
-    
     // Experimental data
     std::string file_name;
     file_name = "/Users/manouchehr/Documents/GitHub/Plastic-adjust/exp_data/CP14.txt";
@@ -237,20 +243,21 @@ void LoadElastoPlasticModel()
     // LE Linear elastic response
     TPZElasticResponse ER;
     
-    /// number 
-    REAL E  = 2000.0; // MPa
-    REAL nu = 0.25; // MPa
+    /// number CP14
+    REAL E  = 2000; // MPa
+    REAL nu = 0.20; // MPa
     
     STATE G = E / (2. * (1. + nu));
     STATE K = E / (3. * (1. - 2 * nu));
-    REAL CA      = 16;
-    REAL CB      = 0.04;
-    REAL CC      = 14;
-    REAL CD      = 0.02;
-    REAL CR      = 3.0;
+    REAL CA      = 18;
+    REAL CB      = 0.0284035;
+    REAL CC      = 16;
+    REAL CD      = 0.1;
+    REAL CR      = 2.0;
     REAL CW      = 0.2;
-    REAL X_0     = -70.0;
+    REAL X_0     = -90;
     REAL phi = 0, psi = 1., N = 0;
+    
     
     REAL Pc = X_0/3.0;
 
@@ -272,9 +279,7 @@ void LoadElastoPlasticModel()
     REAL k_0;
     LEDS.InitialDamage(sigma, k_0);
     LEDS.fN.m_hardening = k_0;
-    
-    
-    epsilon_t.Zero();
+
     
     TPZFNMatrix<2575,STATE> LEDS_epsilon_stress(n_data,4);
     for (int64_t id = 0; id < n_data; id++) {
@@ -297,6 +302,74 @@ void LoadElastoPlasticModel()
     LEDS_epsilon_stress.Print("data = ", std::cout,EMathematicaInput);
 }
 
+
+void LoadCompareDSModel()
+{
+    // Experimental data
+    std::string file_name;
+    file_name = "/Users/manouchehr/Documents/GitHub/Plastic-adjust/exp_data/Sandler_Rubin_data_1979.txt";
+    TPZFNMatrix<80,STATE> ref_epsilon_stress;
+    ref_epsilon_stress = readStressStrain(file_name);
+    //     data.Print(std::cout);
+    
+    int64_t n_data_to_compare = 15;
+    TPZFNMatrix<80,STATE> LEDS_epsilon_stress(n_data_to_compare,ref_epsilon_stress.Cols());
+    TPZFNMatrix<80,int> comparison(n_data_to_compare,ref_epsilon_stress.Cols());
+    
+    // DS Dimaggio Sandler PV
+    TPZPlasticStepPV<TPZSandlerExtended, TPZElasticResponse> LEDS;
+    
+    // LE Linear elastic response
+    TPZElasticResponse ER;
+    
+    // Sandler and Rubin data:
+    REAL K = 66.67; // ksi
+    REAL G = 40.00; // ksi
+    
+    REAL E       = (9.0*K*G)/(3.0*K+G);
+    REAL nu      = (3.0*K - 2.0*G)/(2.0*(3.0*K+G));
+    REAL CA      = 0.250;
+    REAL CB      = 0.670;
+    REAL CC      = 0.180;
+    REAL CD      = 0.670;
+    REAL CR      = 2.500;
+    REAL CW      = 0.066;
+    REAL phi = 0, psi = 1., N = 0.;
+    
+    ER.SetEngineeringData(E, nu);
+    LEDS.SetElasticResponse(ER);
+    LEDS.fYC.SetUp(CA, CB, CC, CD, K, G, CW, CR, phi, N, psi);
+    
+    TPZTensor<REAL> epsilon_t,sigma;
+    TPZFMatrix<REAL> source(6,1,0.0);
+    sigma.Zero();
+    
+    // Initial damage data
+    REAL k_0;
+    LEDS.InitialDamage(sigma, k_0);
+    LEDS.fN.m_hardening = k_0;
+    LEDS.fYC.SetInitialDamage(k_0);
+    
+    TPZPlasticState<STATE> plastic_state;
+    for (int i = 0; i < n_data_to_compare; i++) {
+        
+        source(3,0) = ref_epsilon_stress(i,0);
+        epsilon_t.CopyFrom(source);
+        LEDS.ApplyStrainComputeSigma(epsilon_t, sigma);
+        
+        LEDS_epsilon_stress(i,0) = epsilon_t.YY();
+        LEDS_epsilon_stress(i,1) = sigma.YY();
+        LEDS_epsilon_stress(i,2) = sigma.XX();
+        LEDS_epsilon_stress(i,3) = LEDS.fN.VolHardening();
+        LEDS_epsilon_stress(i,4) = LEDS.fN.MType();
+        
+    }
+    
+    LEDS_epsilon_stress.Print("data = ",std::cout,EMathematicaInput);
+    
+}
+
+
 TPZFMatrix<REAL> Read_Duplet(int n_data, std::string file)
 {
     TPZFMatrix<REAL> data(n_data,2);
@@ -316,4 +389,34 @@ TPZFMatrix<REAL> Read_Duplet(int n_data, std::string file)
     return data;
 }
 
+
+TPZFMatrix<STATE> readStressStrain(std::string &file_name) {
+    
+    std::ifstream in(file_name.c_str());
+    int n_data = 26;
+    TPZFMatrix<STATE> stress_strain(n_data, 5, 0.);
+    
+    REAL epsilon_1, sigma_1, sigma_3, alpha_damage, m_type;
+    
+    int count = 0;
+    while(in)
+    {
+        in >> epsilon_1;
+        in >> sigma_1;
+        in >> sigma_3;
+        in >> alpha_damage;
+        in >> m_type;
+        
+        stress_strain(count,0) = epsilon_1;
+        stress_strain(count,1) = sigma_1;
+        stress_strain(count,2) = sigma_3;
+        stress_strain(count,3) = alpha_damage;
+        stress_strain(count,4) = m_type - 1; // m_type = 0 , means elastic behavior
+        count++;
+        if (count == n_data) {
+            break;
+        }
+    }
+    return stress_strain;
+}
 
