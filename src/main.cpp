@@ -11,6 +11,8 @@
 
 /// Plasticity
 #include "TPZPlasticStepPV.h"
+#include "TPZSandlerExtended.h"
+#include "TPZYCMohrCoulombPV.h"
 
 /// Adjustment classes
 #include "TF1DSAdjust.h"
@@ -28,6 +30,9 @@ void translateToFunction(json singleCommand);
 /// Method to present elastoplastic model
 void LoadElastoPlasticModel();
 
+/// Method to present Mohr-Coulomb model
+void LoadMCModel();
+
 // Read experimental data
 TPZFMatrix<REAL> Read_Duplet(int n_data, std::string file);
 
@@ -38,17 +43,20 @@ int main() {
     
 //    TF2DSAdjust_DW F2;
 //    F2.PopulateDW();
-//    F2.AdjustDW();
+//    F2.AdjustDW2();
 //    
 //    return 0;
-//    
+//
     
-    TF2DSAdjust_R F2;
-    F2.PopulateR();
-    F2.AdjustR2();
+//    TF2DSAdjust_R F2;
+//    F2.PopulateR();
+//    F2.AdjustR();
+//    return 0;
+    
+    LoadElastoPlasticModel();
     return 0;
     
-//    LoadElastoPlasticModel();
+//    LoadMCModel();
 //    return 0;
     
 //    TF1DSAdjust F1;
@@ -66,7 +74,7 @@ int main() {
     std::string path;
     std::ifstream input;
 
-    path = "../input_CapF2DS12.json";
+    path = "../input_CapF2DSfindRcp14.json";
     input.open(path.c_str());
 
     while (!input.is_open()) {
@@ -152,6 +160,66 @@ void translateToFunction(json singleCommand) {
     return;
 }
 
+void LoadMCModel()
+{
+    
+    // Experimental data
+    std::string file_name;
+    file_name = "/Users/manouchehr/Documents/GitHub/Plastic-adjust/exp_data/CP10.txt";
+    int64_t n_data = 701;
+    TPZFMatrix<REAL> data = Read_Duplet(n_data, file_name);
+    //     data.Print(std::cout);
+    
+    // MC Mohr Coloumb PV
+    TPZPlasticStepPV<TPZYCMohrCoulombPV, TPZElasticResponse> LEMC;
+    
+    // LE Linear elastic response
+    TPZElasticResponse ER;
+    
+    /// number CP10
+//    REAL E  = 4110.72; // MPa
+//    REAL nu = 0.295099;
+    
+    REAL E  = 2693.74; // MPa
+    REAL nu = 0.105264;
+    
+    
+    ER.SetEngineeringData(E, nu);
+    
+    // Mohr Coulomb data; Nlopt
+    REAL mc_cohesion    = 3.47113;
+    REAL mc_phi         = 19.1662*M_PI/180;
+    REAL mc_psi         = mc_phi; // because MS do not understand
+    
+    LEMC.SetElasticResponse(ER);
+    LEMC.fYC.SetUp(mc_phi, mc_psi, mc_cohesion, ER);
+    
+    TPZTensor<REAL> epsilon_t,sigma,sigma_target;
+    sigma.Zero();
+    epsilon_t.Zero();
+    
+    epsilon_t.Zero();
+    
+    TPZFNMatrix<701,STATE> LEMC_epsilon_stress(n_data,4);
+    
+    for (int64_t id = 0; id < n_data; id++) {
+        
+        // For a given strain
+        epsilon_t.XX() = -0.01*data(id,0);
+        epsilon_t.YY() = -0.01*data(id,1);
+        epsilon_t.ZZ() = -0.01*data(id,1);
+        
+        LEMC.ApplyStrainComputeSigma(epsilon_t, sigma_target);
+        
+        
+        LEMC_epsilon_stress(id,0) = epsilon_t.XX();
+        LEMC_epsilon_stress(id,1) = epsilon_t.YY();
+        LEMC_epsilon_stress(id,2) = sigma_target.XX();
+        LEMC_epsilon_stress(id,3) = sigma_target.YY();
+    }
+    
+    LEMC_epsilon_stress.Print("data = ", std::cout,EMathematicaInput);
+}
 
 void LoadElastoPlasticModel()
 {
@@ -159,7 +227,7 @@ void LoadElastoPlasticModel()
     // Experimental data
     std::string file_name;
     file_name = "/Users/manouchehr/Documents/GitHub/Plastic-adjust/exp_data/CP14.txt";
-    int64_t n_data = 2999;
+    int64_t n_data = 4619;
     TPZFMatrix<REAL> data = Read_Duplet(n_data, file_name);
 //     data.Print(std::cout);
     
@@ -169,26 +237,23 @@ void LoadElastoPlasticModel()
     // LE Linear elastic response
     TPZElasticResponse ER;
     
-    /// number CP14
-    REAL E  = 2000; // MPa
-    REAL nu = 0.2; // MPa
+    /// number 
+    REAL E  = 2000.0; // MPa
+    REAL nu = 0.25; // MPa
     
     STATE G = E / (2. * (1. + nu));
     STATE K = E / (3. * (1. - 2 * nu));
-    REAL CA      = 18;
-    REAL CB      = 0.01;
-    REAL CC      = 16;
-    REAL CD      = 0.18;
-    REAL CR      = 2.0;
-    REAL CW      = 0.001;
-    REAL X_0     = -40.0;
+    REAL CA      = 16;
+    REAL CB      = 0.04;
+    REAL CC      = 14;
+    REAL CD      = 0.02;
+    REAL CR      = 3.0;
+    REAL CW      = 0.2;
+    REAL X_0     = -70.0;
     REAL phi = 0, psi = 1., N = 0;
     
     REAL Pc = X_0/3.0;
-    
 
-    
-    
     ER.SetEngineeringData(E, nu);
     
     LEDS.SetElasticResponse(ER);
