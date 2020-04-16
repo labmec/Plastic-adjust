@@ -53,10 +53,10 @@ int main() {
 //    return 0;
 //
     
-//    TF2DSAdjust_R F2;
-//    F2.PopulateR();
-//    F2.AdjustR();
-//    return 0;
+    TF2DSAdjust_R F2;
+    F2.PopulateR();
+    F2.AdjustR();
+    return 0;
     
     LoadCompareDSModel();
     return 0;

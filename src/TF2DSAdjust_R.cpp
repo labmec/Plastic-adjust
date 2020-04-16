@@ -54,8 +54,11 @@ void TF2DSAdjust_R::PopulateR()
     /// Render at least two points that touch the cap of DiMaggio-Sandler; temporary
     const int n_I1 = 2;
     
-    REAL I1_data[n_I1] = {-60.9707, -55.0043};
-    REAL F1_data[n_I1] = {0.530229, 6.07571};
+//    REAL I1_data[n_I1] = {-60.9707, -55.0043};
+//    REAL F1_data[n_I1] = {0.530229, 6.07571};
+    
+    REAL I1_data[n_I1] = {-60.9137409, -55.0043};
+    REAL F1_data[n_I1] = {0.512394844, 6.07571};
     
     m_I1_SqJ2.Redim(n_I1,2);
     
